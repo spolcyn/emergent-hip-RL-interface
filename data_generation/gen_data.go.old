@@ -1,0 +1,47 @@
+package main
+
+import "fmt"
+import "github.com/emer/emergent/patgen"
+import "github.com/emer/etable/etable"
+
+func main() {
+	fmt.Printf("yeet")
+
+	/* setup parameters for creation */
+	NUM_CAT := 12 // number of categories
+	NUM_VOCAB_PER_CAT := 5
+
+	vocab := patgen.Vocab{}
+	name := ""
+	rows := 1 // just want one unit
+	poolY := 3
+	poolX := 4
+
+	// same as hip_bench 3/30/20
+	var pctAct float32 = .5
+	var minPctDiff float32 = .5
+
+	name_base := "cat"
+
+	/* create parameters */
+	for c := 0; c < NUM_CAT; c++ {
+		for v := 0; v < NUM_VOCAB_PER_CAT; v++ {
+
+			// create the vocab item's name string
+			name = fmt.Sprintf("%v-%v-%v", name_base, c, v)
+
+			// create the vocab item's pattern
+			patgen.AddVocabPermutedBinary(vocab, name, rows, poolY, poolX, pctAct, minPctDiff)
+		}
+	}
+
+	/* save to CSV */
+	table := etable.NewTable("data")
+	table.AddRows(rows)
+
+	for k, v := range vocab {
+		table.AddCol(v, k)
+	}
+
+	table.SaveCSV("data.csv", etable.Comma, true)
+}

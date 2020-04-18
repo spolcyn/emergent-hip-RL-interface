@@ -1,0 +1,7 @@
+Dataset update:
+
+curl -X PUT -H "Content-Type: application/json" -d '{"filename":"wheedata.csv"}' http://localhost:1323/dataset/update
+
+Train update:
+
+curl -X PUT -H "Content-Type: application/json" -d '{"Training":"Start"}' http://localhost:1323/model/train
