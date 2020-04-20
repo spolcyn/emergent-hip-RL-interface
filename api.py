@@ -3,6 +3,7 @@
 
 import requests
 import time
+import random
 
 SERVER_URL="http://localhost"
 PORT="1323"
@@ -27,7 +28,7 @@ def MakeRequest(verb, url, data):
     except:
         return "ERROR: " + response.text
     else:
-        return "Success"
+        return response.text
         #return "Request: " + verb + " " + str(data) + " to/from " + url + " was succesful."
 
 # update training data file to filename
@@ -44,6 +45,11 @@ def UpdateInputData(filename):
 
     return MakeRequest('PUT', MakeURLString(api_endpoint), data)
 
+def Add(a, b):
+    api_endpoint = "/add"
+    data = {"test1":a, "test2":b}
+    return MakeRequest('GET', MakeURLString(api_endpoint), data)
+
 # Updates the training data to be drawn from wheedata.csv
 # Filename is given as a relative path from where the model is 
 # to where the dataset is.
@@ -53,7 +59,8 @@ response = UpdateInputData("wheedata.csv")
 print(response)
 
 t = time.monotonic()
-for i in range(1000):
-    UpdateInputData("wheedata.csv")
+sum = 0
+for i in range(100):
+    sum += int(Add(random.randint(0,10), random.randint(0,10)))
 
-print(time.monotonic() - t)
+print("Elapsed time", time.monotonic() - t)

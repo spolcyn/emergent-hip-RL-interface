@@ -3,10 +3,13 @@
 
 package main
 
+import "C"
+
 import (
 	"math"
 	"strconv"
 
+	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/patgen"
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etensor"
@@ -184,4 +187,42 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) int {
 
 		return (numWrong / numUnits)
 	*/
+}
+
+// updates the testenv with a pattern so that the index 0 of the testenv will return the test pattern
+// for use with testing a very specific, arbitrary pattern that can't be pre-loaded in a dataset
+// because we have no idea what the cortex model is going to send at us
+func (ss *Sim) UpdateEnvWithTestPattern(tsr *etensor.Float32) {
+
+	var env env.FixedTable = ss.TestEnv
+
+	// create new etable with pattern
+	table := etable.NewTable("TestPattern")
+	table.AddCol(tsr, "Input")
+	table.AddCol(tsr, "ECout")
+
+	// create index view from etable for TestEnv.Table
+	env.Table = etable.NewIdxView(table)
+
+	// set TestEnv Sequential
+	env.Sequential = true
+
+	// Valdiate TestEnv
+	env.Validate()
+
+	// Init TestEnv
+	env.Init(0)
+
+}
+
+// parses a tensor from a JSON format
+// not sure what the standard JSON format for an n-d array is yet though, will probably use whatever
+// the standard dump format for a numpy array is
+func ParseTensorFromJSON(json string) *etensor.Float32 {
+	return &etensor.Float32{}
+}
+
+//export add
+func add(test1, test2 int) int {
+	return test1 + test2
 }

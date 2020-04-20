@@ -6,7 +6,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/emer/etable/etable"
 )
 
 // yote
@@ -27,13 +26,6 @@ func (ss *Sim) RestUpdateInputPatternData(update *DatasetUpdate) error {
 	// as it turns out, TestAB is where the IdxView for the TestItem comes from, so we need to update that
 	// NOTE: for now, we're still opening InputPatterns as well, but long-term that shouldn't happen
 	ss.OpenPatComma(ss.InputPatterns, update.Filename, "InputPatterns", "Input Patterns")
-	ss.OpenPatComma(ss.TestAB, update.Filename, "InputPatterns", "Input Patterns")
-
-	// also need to update the TestEnv for the new input patterns
-	ss.TestEnv.Table = etable.NewIdxView(ss.TestAB)
-	ss.TestEnv.Sequential = true
-	ss.TestEnv.Validate()
-	ss.TrainEnv.Init(0) // since there are seperate train and test environments, re-init'ing should be no problem
 
 	return nil
 }
@@ -42,8 +34,13 @@ func (ss *Sim) RestUpdateInputPatternData(update *DatasetUpdate) error {
 func (ss *Sim) RestTestPattern(tr *TestRequest) (string, error) {
 	if !ss.IsRunning {
 		ss.IsRunning = true
-		fmt.Printf("testing index: %v\n", tr.patternID)
-		ss.TestItem(tr.patternID)
+		fmt.Printf("testing pattern: %v\n", tr.pattern)
+
+		// setup the environment as we want it
+		tsr := ParseTensorFromJSON(tr.pattern)
+		ss.UpdateEnvWithTestPattern(tsr)
+
+		ss.TestItem(0) // always use 0, that's where we'll put the item
 		ss.IsRunning = false
 
 		return "Patern tested", nil // TODO: make this return the test error object

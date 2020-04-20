@@ -5,6 +5,8 @@
 // hip runs a hippocampus model on the AB-AC paired associate learning task
 package main
 
+import "C"
+
 import (
 	"flag"
 	"fmt"
@@ -35,6 +37,23 @@ import (
 	"github.com/goki/ki/kit"
 	"github.com/goki/mat32"
 )
+
+//export initmain
+func initmain() {
+	TheSim.New()
+	TheSim.Config()
+
+	server := HipServer{}
+	server.Init(":1323", &TheSim)
+
+	if len(os.Args) > 1 {
+		TheSim.CmdArgs() // simple assumption is that any args = no gui -- could add explicit arg if you want
+	} else {
+		gimain.Main(func() { // this starts gui -- requires valid OpenGL display connection (e.g., X11)
+			guirun()
+		})
+	}
+}
 
 func main() {
 	TheSim.New()
@@ -1731,6 +1750,9 @@ func (ss *Sim) ConfigGui() *gi.Window {
 				if sig == int64(gi.DialogAccepted) {
 					val := gi.StringPromptDialogValue(dlg)
 					idxs := ss.TestEnv.Table.RowsByString("Name", val, etable.Contains, etable.IgnoreCase)
+
+					fmt.Printf("idxs %v\n", idxs)
+
 					if len(idxs) == 0 {
 						gi.PromptDialog(nil, gi.DlgOpts{Title: "Name Not Found", Prompt: "No patterns found containing: " + val}, gi.AddOk, gi.NoCancel, nil, nil)
 					} else {

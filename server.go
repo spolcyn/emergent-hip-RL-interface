@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/labstack/echo"
 	"net/http"
+	"strconv"
 )
 
 type HipServer struct {
@@ -38,7 +39,7 @@ type TrainRequest struct {
 }
 
 type TestRequest struct {
-	patternID int
+	pattern string `json:"Pattern"`
 }
 
 type TestReturn struct {
@@ -120,4 +121,25 @@ func (hs *HipServer) setupRoutes() {
 		// finish interaction
 		return c.String(http.StatusOK, str)
 	})
+
+	hs.es.GET("/add", func(c echo.Context) error {
+
+		// read in request
+		ar := new(Add)
+
+		if err := c.Bind(ar); err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+
+		// add
+		result := add(ar.test1, ar.test2)
+
+		// finish interaction
+		return c.String(http.StatusOK, strconv.Itoa(result))
+	})
+}
+
+type Add struct {
+	test1 int `query:"test1"`
+	test2 int `query:"test2"`
 }
