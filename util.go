@@ -3,8 +3,6 @@
 
 package main
 
-import "C"
-
 import (
 	"math"
 	"strconv"
@@ -220,9 +218,4 @@ func (ss *Sim) UpdateEnvWithTestPattern(tsr *etensor.Float32) {
 // the standard dump format for a numpy array is
 func ParseTensorFromJSON(json string) *etensor.Float32 {
 	return &etensor.Float32{}
-}
-
-//export add
-func add(test1, test2 int) int {
-	return test1 + test2
 }

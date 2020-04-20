@@ -45,11 +45,6 @@ def UpdateInputData(filename):
 
     return MakeRequest('PUT', MakeURLString(api_endpoint), data)
 
-def Add(a, b):
-    api_endpoint = "/add"
-    data = {"test1":a, "test2":b}
-    return MakeRequest('GET', MakeURLString(api_endpoint), data)
-
 # Updates the training data to be drawn from wheedata.csv
 # Filename is given as a relative path from where the model is 
 # to where the dataset is.
@@ -57,10 +52,3 @@ response = UpdateTrainingData("wheedata.csv")
 print(response)
 response = UpdateInputData("wheedata.csv")
 print(response)
-
-t = time.monotonic()
-sum = 0
-for i in range(100):
-    sum += int(Add(random.randint(0,10), random.randint(0,10)))
-
-print("Elapsed time", time.monotonic() - t)

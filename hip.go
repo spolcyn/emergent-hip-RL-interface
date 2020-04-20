@@ -38,23 +38,6 @@ import (
 	"github.com/goki/mat32"
 )
 
-//export initmain
-func initmain() {
-	TheSim.New()
-	TheSim.Config()
-
-	server := HipServer{}
-	server.Init(":1323", &TheSim)
-
-	if len(os.Args) > 1 {
-		TheSim.CmdArgs() // simple assumption is that any args = no gui -- could add explicit arg if you want
-	} else {
-		gimain.Main(func() { // this starts gui -- requires valid OpenGL display connection (e.g., X11)
-			guirun()
-		})
-	}
-}
-
 func main() {
 	TheSim.New()
 	TheSim.Config()

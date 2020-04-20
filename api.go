@@ -8,8 +8,6 @@ import (
 	"fmt"
 )
 
-// yote
-
 /* Update the data used for training the model */
 func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 	fmt.Printf("updating training data with file: %v\n", update.Filename)
