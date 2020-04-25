@@ -32,10 +32,10 @@ func (ss *Sim) RestUpdateInputPatternData(update *DatasetUpdate) error {
 func (ss *Sim) RestTestPattern(tr *TestRequest) (string, error) {
 	if !ss.IsRunning {
 		ss.IsRunning = true
-		fmt.Printf("testing pattern: %v\n", tr.pattern)
+		fmt.Printf("testing pattern: %v\n", tr.Pattern)
 
 		// setup the environment as we want it
-		tsr := ParseTensorFromJSON(tr.pattern)
+		tsr := ParseTensorFromJSON(tr.Shape, tr.Pattern)
 		ss.UpdateEnvWithTestPattern(tsr)
 
 		ss.TestItem(0) // always use 0, that's where we'll put the item

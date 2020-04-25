@@ -34,11 +34,12 @@ type DatasetUpdate struct {
 }
 
 type TrainRequest struct {
-	ToState string `json:"Training"`
+	ToState string `json:"training"`
 }
 
 type TestRequest struct {
-	pattern string `json:"Pattern"`
+	Shape   string `json:"shape"`   // the pattern's shape
+	Pattern string `json:"pattern"` // the patterns numpy json dump representation
 }
 
 type TestReturn struct {

@@ -1008,11 +1008,14 @@ func (ss *Sim) OpenPats() {
 	// patgen.ReshapeCppFile(ss.TestAC, "Test_AC.dat", "TestAC.dat")
 	// patgen.ReshapeCppFile(ss.TestLure, "Lure.dat", "TestLure.dat")
 	ss.OpenPat(ss.TrainAB, "train_ab.tsv", "TrainAB", "AB Training Patterns")
-	ss.OpenPat(ss.TestAB, "test_ab.tsv", "TestAB", "AB Testing Patterns")
 	//ss.OpenPatComma(ss.TrainAB, "dataset.csv", "TrainAB", "AB Training Patterns")
+
+	//ss.OpenPatComma(ss.TestAB, "test_ab.tsv", "TestAB", "AB Testing Patterns")
+	ss.OpenPatComma(ss.TestAB, "nocontext data sets/test_nocontext-sparse-column-samedata.csv", "TestAB", "AB Testing Patterns")
+
 	ss.OpenPat(ss.TrainAC, "train_ac.tsv", "TrainAC", "AC Training Patterns")
-	//ss.OpenPatComma(ss.TestAB, "nocontext data sets/test_nocontext-sparse-column-samedata.csv", "TestAB", "AB Testing Patterns")
 	ss.OpenPat(ss.TestAC, "test_ac.tsv", "TestAC", "AC Testing Patterns")
+
 	ss.OpenPat(ss.TestLure, "test_lure.tsv", "TestLure", "Lure Testing Patterns")
 
 	// SP: Test the open/close CSV vocab
