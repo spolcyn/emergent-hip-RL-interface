@@ -3,8 +3,8 @@
 
 all: iwhipmodel
 
-iwhipmodel: pkg/hipapi/api.go pkg/hipapi/util.go pkg/hipapi/server.go cmd/iwhipmodel/hip.go cmd/iwhipmodel/params.go
-	go build cmd/
+iwhipmodel: pkg/hipmodel/api.go pkg/hipmodel/util.go pkg/hipmodel/server.go pkg/hipmodel/hip.go pkg/hipmodel/params.go pkg/hipmodel/hip_utils.go cmd/iwhipmodel/main.go
+	go build ./cmd/iwhipmodel
 
 run: iwhipmodel
 	./iwhipmodel

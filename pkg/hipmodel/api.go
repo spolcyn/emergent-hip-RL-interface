@@ -1,10 +1,11 @@
 // api.go
 // implements the methods interacting between the model and the server
 
-package apihip
+package hipmodel
 
 import (
 	"errors"
+	"fmt"
 	"log"
 )
 
@@ -29,45 +30,50 @@ func (ss *Sim) RestUpdateInputPatternData(update *DatasetUpdate) error {
 }
 
 /* Test an item */
-func (ss *Sim) RestTestPattern(tr *TestRequest) (string, error) {
-	if !ss.IsRunning {
-		ss.IsRunning = true
-		log.Printf("testing pattern: %v\n", tr.Pattern)
-
-		// setup the environment as we want it
-		tsr := ParseTensorFromJSON(tr.Shape, tr.Pattern)
-		ss.UpdateEnvWithTestPattern(tsr)
-
-		ss.TestItem(0) // always use 0, that's where we'll put the item
-		ss.IsRunning = false
-
-		return "Patern tested", nil // TODO: make this return the test error object
-	} else {
-		return "", errors.New("Model is already running, couldn't test item yet")
+func (ss *Sim) RestTestPattern(tr *TestRequest) (*NameError, error) {
+	if ss.IsRunning {
+		return nil, errors.New("Model is already running, couldn't test item yet")
 	}
+
+	ss.IsRunning = true
+	log.Printf("testing pattern: %v\n", tr.Pattern)
+
+	// setup the environment as we want it
+	tsr := ParseTensorFromJSON(tr.Shape, tr.Pattern)
+	ss.UpdateEnvWithTestPattern(tsr)
+
+	ss.TestItem(0) // always use 0, that's where we'll put the item
+	ss.IsRunning = false
+
+	return ss.NameErrorResult, nil
 }
 
 /* Start the model's training process */
-func (ss *Sim) RestUpdateTrainingState(tr *TrainRequest) (string, error) {
+func (ss *Sim) RestStartTraining(tr *TrainRequest) (string, error) {
 
-	action, success := ss.ToolBar.FindActionByName("Train")
+	/*
+		action, success := ss.ToolBar.FindActionByName("Train")
 
-	if !success {
-		log.Println("Error, 'Train' button not found")
-		return "", errors.New("Train GUI button not found")
-	}
+		if !success {
+			log.Println("Error, 'Train' button not found")
+			return "", errors.New("Train GUI button not found")
+		}*/
 
 	if ss.IsRunning {
-		return "Training is already running", nil
+		return "", errors.New("Training is already running")
 	}
 
-	action.Trigger()
+	ss.MaxRuns = tr.MaxRuns
+	ss.MaxEpcs = tr.MaxEpcs
 
-	if !ss.IsRunning {
-		return "", errors.New("Start training failed")
-	}
+	// re-init model to clear previous weights and reset training parameters
+	ss.Init()
 
-	return "Training started", nil
+	// start the training in a goroutine
+	go ss.Train()
+	ss.IsRunning = true
+
+	return fmt.Sprintf("Training started. Max Runs: %v, Max Epochs: %v\n", ss.MaxRuns, ss.MaxEpcs), nil
 }
 
 /* Check on the model's training status */

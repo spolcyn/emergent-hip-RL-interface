@@ -1,7 +1,7 @@
 // server.go
 // implements the REST API server for the hippocampus model
 
-package hipapi
+package hipmodel
 
 import (
 	"fmt"
@@ -33,13 +33,14 @@ type DatasetUpdate struct {
 	Filename string `json:"filename"`
 }
 
-type TrainRequest struct {
-	ToState string `json:"training"`
-}
-
 type TestRequest struct {
 	Shape   string `json:"shape"`   // the pattern's shape
 	Pattern string `json:"pattern"` // the patterns numpy json dump representation
+}
+
+type TrainRequest struct {
+	MaxRuns int `json:"maxruns" query:"maxruns" form:"maxruns"` // max runs to train for
+	MaxEpcs int `json:"maxepcs" query:"maxepcs" form:"maxepcs`  // max epochs to train for
 }
 
 type TestReturn struct {
@@ -99,14 +100,18 @@ func (hs *HipServer) setupRoutes() {
 		}
 
 		// test the item
-		str, _ := hs.sim.RestTestPattern(tr)
+		str, err := hs.sim.RestTestPattern(tr)
 
 		// finish interaction
-		return c.String(http.StatusOK, str)
+		if err == nil {
+			return c.String(http.StatusOK, fmt.Sprintf("%v", str))
+		} else {
+			return c.String(http.StatusOK, err.Error())
+		}
 	})
 
 	// start training the model
-	hs.es.PUT("/model/train", func(c echo.Context) error {
+	hs.es.POST("/model/train", func(c echo.Context) error {
 
 		// read in request
 		tr := new(TrainRequest)
@@ -115,10 +120,14 @@ func (hs *HipServer) setupRoutes() {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
 
-		// update dataset
-		str, _ := hs.sim.RestUpdateTrainingState(tr)
+		// start training
+		str, err := hs.sim.RestStartTraining(tr)
 
-		// finish interaction
-		return c.String(http.StatusOK, str)
+		if err == nil {
+			// finish interaction
+			return c.String(http.StatusOK, str)
+		} else {
+			return c.String(http.StatusPreconditionFailed, err.Error())
+		}
 	})
 }
