@@ -2,3 +2,4 @@ iw-hip-model
 *.swp
 .DS_Store
 iwhipmodel
+*.csv
