@@ -7,4 +7,4 @@ iwhipmodel: pkg/hipmodel/api.go pkg/hipmodel/util.go pkg/hipmodel/server.go pkg/
 	go build ./cmd/iwhipmodel
 
 run: iwhipmodel
-	./iwhipmodel
+	./iwhipmodel nogui

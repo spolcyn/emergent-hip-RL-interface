@@ -4,14 +4,18 @@
 package hipmodel
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/labstack/echo"
+	"log"
 	"net/http"
+	"sync"
 )
 
 type HipServer struct {
 	es  *echo.Echo // echo server
 	sim *Sim       // the hippocampus simulation
+	mu  *sync.Mutex
 }
 
 /* Creates and runs the hippocampus API server */
@@ -19,9 +23,13 @@ func (hs *HipServer) Init(address string, sim *Sim) {
 	// setup properties
 	hs.sim = sim
 	hs.es = echo.New()
+	hs.mu = &sync.Mutex{}
 
 	// setup server
 	hs.setupRoutes()
+
+	// setup loggin
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// start server
 	go func() { hs.es.Logger.Fatal(hs.es.Start(address)) }()
@@ -30,7 +38,10 @@ func (hs *HipServer) Init(address string, sim *Sim) {
 /*** API-Related Data Types ***/
 
 type DatasetUpdate struct {
-	Filename string `json:"filename"`
+	Source   string   `json:"method"` // source of the new dataset: "file", if reading from a file, or "body", if transmitted in request body
+	Filename string   `json:"filename"`
+	Patterns []string `json:"patterns"`
+	Shape    string   `json:"shape"` // patterns' shape. all must be the same size
 }
 
 type TestRequest struct {
@@ -56,14 +67,17 @@ func (hs *HipServer) setupRoutes() {
 	// update training data to new dataset
 	hs.es.PUT("/dataset/train/update", func(c echo.Context) error {
 
+		var err error
+
 		// read in request
 		update := new(DatasetUpdate)
-		if err := c.Bind(update); err != nil {
+		if err = c.Bind(update); err != nil {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
 
-		// update dataset
-		err := hs.sim.RestUpdateTrainingData(update)
+		hs.mu.Lock()
+		err = hs.sim.RestUpdateTrainingData(update)
+		hs.mu.Unlock()
 
 		if err == nil {
 			return c.String(http.StatusOK, fmt.Sprintf("Training dataset updated to %v", update.Filename))
@@ -82,8 +96,17 @@ func (hs *HipServer) setupRoutes() {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
 
-		// update dataset
-		hs.sim.RestUpdateInputPatternData(update)
+		log.Printf("update: %v\n", update)
+
+		if update.Source == "file" {
+			// update dataset
+			hs.mu.Lock()
+			hs.sim.RestUpdateInputPatternData(update)
+			hs.mu.Unlock()
+		} else {
+			log.Printf("body: \n\n%v\n", update.Patterns)
+
+		}
 
 		// finish interaction
 		return c.String(http.StatusOK, fmt.Sprintf("Input pattern dataset updated to %v", update.Filename))
@@ -100,11 +123,19 @@ func (hs *HipServer) setupRoutes() {
 		}
 
 		// test the item
-		str, err := hs.sim.RestTestPattern(tr)
+		hs.mu.Lock()
+		nameError, err := hs.sim.RestTestPattern(tr)
+		hs.mu.Unlock()
 
 		// finish interaction
 		if err == nil {
-			return c.String(http.StatusOK, fmt.Sprintf("%v", str))
+			jsonNE, err2 := json.Marshal(nameError)
+
+			if err2 != nil {
+				log.Printf("JSON encoding error, %v", err2.Error())
+			}
+
+			return c.String(http.StatusOK, string(jsonNE))
 		} else {
 			return c.String(http.StatusOK, err.Error())
 		}
@@ -121,7 +152,9 @@ func (hs *HipServer) setupRoutes() {
 		}
 
 		// start training
+		hs.mu.Lock()
 		str, err := hs.sim.RestStartTraining(tr)
+		hs.mu.Unlock()
 
 		if err == nil {
 			// finish interaction

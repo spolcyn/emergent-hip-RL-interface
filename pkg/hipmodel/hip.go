@@ -29,7 +29,7 @@ import (
 	"github.com/emer/leabra/hip"
 	"github.com/emer/leabra/leabra"
 	"github.com/goki/gi/gi"
-	//"github.com/goki/gi/gimain"
+	"github.com/goki/gi/gimain"
 	"github.com/goki/gi/giv"
 	"github.com/goki/ki/ki"
 	"github.com/goki/ki/kit"
@@ -43,16 +43,13 @@ func InitModel() {
 	server := HipServer{}
 	server.Init(":1323", &TheSim)
 
-	TheSim.CmdArgs()
-
-	/*
-		if len(os.Args) > 1 {
-			TheSim.CmdArgs() // simple assumption is that any args = no gui -- could add explicit arg if you want
-		} else {
-			gimain.Main(func() { // this starts gui -- requires valid OpenGL display connection (e.g., X11)
-				guirun()
-			})
-		}*/
+	if len(os.Args) > 1 {
+		TheSim.CmdArgs() // simple assumption is that any args = no gui -- could add explicit arg if you want
+	} else {
+		gimain.Main(func() { // this starts gui -- requires valid OpenGL display connection (e.g., X11)
+			guirun()
+		})
+	}
 }
 
 func guirun() {
