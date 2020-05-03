@@ -9,6 +9,7 @@ import (
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etensor"
 	"log"
+	"time"
 )
 
 // Update the data used for training the model
@@ -117,11 +118,19 @@ func (ss *Sim) RestStartTraining(tr *TrainRequest) (string, error) {
 	// re-init model to clear previous weights and reset training parameters
 	ss.Init()
 
-	// start the training in a goroutine
-	go ss.Train()
+	// start the training in a goroutine with a channel for completion
+	doneCh := make(chan bool)
 	ss.IsRunning = true
+	go func() { ss.Train(); doneCh <- true }()
 
-	return fmt.Sprintf("Training started. Max Runs: %v, Max Epochs: %v\n", ss.MaxRuns, ss.MaxEpcs), nil
+	// periodically check to see if the training is done, then return.
+	start := time.Now()
+	<-doneCh
+	end := time.Now()
+
+	elapsed := end.Sub(start)
+
+	return fmt.Sprintf("Training completed in %v seconds. Max Runs: %v, Max Epochs: %v\n", elapsed.Seconds(), ss.MaxRuns, ss.MaxEpcs), nil
 }
 
 /* Check on the model's training status */

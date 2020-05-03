@@ -33,7 +33,9 @@ class HipAPI:
 
         response = requests.request(verb, url=url, data=data)
 
-        return response, True
+        # success = (response.status_code == 200) # check if request was sucessful
+
+        return response, (response == True)
 
     # update training data file to filename
     def UpdateTrainingDataFile(self, filename):
@@ -82,7 +84,7 @@ class HipAPI:
 
         pattern: Numpy array representing a 2-D pattern. Numpy array MUST be integers.
 
-        Returns: The pattern to which the recall is most similar and the Hamming distance between the recalled pattern and the most similar pattern.
+        Returns: The pattern (with all emergent etensor properties, including shape, stride, dimension names, and values) to which the recall is most similar and the Hamming distance between the recalled pattern and the most similar pattern.
         """
 
         api_endpoint = "/model/testpattern"
@@ -98,6 +100,11 @@ class HipAPI:
         Args:
             parameters: Dictionary of parameters to specify. If none, default settings will be used. Valid parameters are "maxruns" and "maxepcs".
         """
+
+        if "maxruns" not in parameters.keys():
+            parameters["maxruns"] = 1
+        if "maxepcs" not in parameters.keys():
+            parameters["maxepcs"] = 50
 
         api_endpoint = "/model/train"
 
@@ -118,7 +125,7 @@ class HipAPI:
 
         for i in range(iterations):
             for j, cue in enumerate(cues):
-                response = api.TestPattern(cue)
+                response = self.TestPattern(cue)
                 distance = json.loads(response)["Distance"]
                 reward = np.size(cue) - distance # max reward is size of the pattern -- could normalize
                 rewards[i][j] = reward
@@ -128,33 +135,33 @@ class HipAPI:
 # Updates the training data to be drawn from wheedata.csv
 # Filename is given as a relative path from where the model is 
 # to where the dataset is.
-api = HipAPI()
+hipapi = HipAPI()
 
-TEST_TESTITEM = False
+TEST_TESTITEM = True
 TEST_STEP = False
 TEST_STARTTRAINING = False
-TEST_UTP = True
+TEST_UTP = False
 
 if TEST_STARTTRAINING:
-    response = api.StartTraining({"maxruns":1, "maxepcs":50, "yeet":10})
+    response = hipapi.StartTraining({"maxruns":1, "maxepcs":50, "yeet":10})
     print(response)
 
-# response = api.UpdateTrainingData("datasets/no_context/wheedata.csv")
+# response = hipapi.UpdateTrainingData("datasets/no_context/wheedata.csv")
 # print(response)
-# response = api.UpdateInputData("datasets/no_context/wheedata.csv")
+# response = hipapi.UpdateInputData("datasets/no_context/wheedata.csv")
 # print(response)
 
 if TEST_TESTITEM:
     # testAB's ab_0 pattern
-    bitstring = '0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0'
+    bitstring = '0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0'
     bitlist = bitstring.split(",") # convert to list
     bitlist = [int(x) for x in bitlist] # convert to ints
     #bitlist = bitlist[144:] # get just test pattern
     arr = np.asarray(bitlist, dtype="int") # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
-    response = api.TestPattern(arr)
-    print(response)
+    response, success = hipapi.TestPattern(arr)
+    print(response.text)
 
 if TEST_STEP:
     # testAB's ab_0 pattern
@@ -165,7 +172,7 @@ if TEST_STEP:
     arr = np.asarray(bitlist, dtype="int") # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
-    reward = api.Step([arr], 5)
+    reward = hipapi.Step([arr], 5)
     print(reward)
 
 if TEST_UTP:
