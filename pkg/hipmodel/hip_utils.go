@@ -1,11 +1,10 @@
 package hipmodel
 
 import (
-	//"log"
 	"math"
 	"strconv"
 
-	"github.com/emer/emergent/env"
+	//	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/patgen"
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etensor"
@@ -86,7 +85,7 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 	outPattern := etensor.NewFloat32(ecout.Shape().Shp, nil, nil)
 	ecout.UnitValsTensor(outPattern, "Act")
 
-	//log.Printf("Outpattern:\n\n%v", outPattern)
+	//DPrintf("Outpattern:\n\n%v", outPattern)
 
 	distance := math.MaxInt32
 	var mostSimilar *etensor.Float32
@@ -103,6 +102,8 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 		}
 	}
 
+	//DPrintf("Distance: %v | ClosestPattern: %v", distance, mostSimilar)
+
 	// set the error pattern
 	ss.NameErrorResult = &NameError{Distance: distance, ClosestPattern: mostSimilar.Clone().(*etensor.Float32)}
 }
@@ -112,24 +113,45 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 // because we have no idea what the cortex model is going to send at us
 func (ss *Sim) UpdateEnvWithTestPattern(tsr *etensor.Float32) {
 
-	var env env.FixedTable = ss.TestEnv
+	//var env env.FixedTable = ss.TestEnv
+
+	DPrintf("Test Tensor: \n%v\n", tsr)
+
+	// create column to put tensor in as row and rownames
+	colWrap := etensor.NewFloat32(append([]int{1}, tsr.Shape.Shp...), nil, []string{"row"})
+	colWrap.SubSpace([]int{0}).CopyFrom(tsr)
+	rowNames := etensor.NewString([]int{1}, nil, []string{"row"})
 
 	// create new etable with pattern
 	table := etable.NewTable("TestPattern")
-	table.AddCol(tsr, "Input")
-	table.AddCol(tsr, "ECout")
+	table.SetNumRows(1)
+	table.AddCol(rowNames, "Name")
+	table.AddCol(colWrap, "Input")
+	table.AddCol(colWrap, "ECout")
 
-	// create index view from etable for TestEnv.Table
-	env.Table = etable.NewIdxView(table)
+	DPrintf("TestAB Table BEFORE: \n%v\n\n", ss.TestAB)
 
-	// set TestEnv Sequential
-	env.Sequential = true
+	// set test data
+	ss.TestAB = table
 
-	// Valdiate TestEnv
-	env.Validate()
+	DPrintf("TestAB Table AFTER: \n%v\n\n", ss.TestAB)
 
-	// Init TestEnv
-	env.Init(0)
+	ss.ConfigEnv()
+
+	DPrintf("Test Env: \n%v\n\n", ss.TestEnv)
+	/*
+		// create index view from etable for TestEnv.Table
+		env.Table = etable.NewIdxView(table)
+
+		// set TestEnv Sequential
+		env.Sequential = true
+
+		// Valdiate TestEnv
+		env.Validate()
+
+		// Init TestEnv
+		env.Init(0)
+	*/
 
 }
 

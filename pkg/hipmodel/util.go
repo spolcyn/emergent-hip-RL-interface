@@ -13,6 +13,17 @@ import (
 	"github.com/emer/etable/etensor"
 )
 
+// Debugging
+const Debug = 0
+
+func DPrintf(format string, a ...interface{}) (n int, err error) {
+
+	if Debug > 0 {
+		log.Printf(format, a...)
+	}
+	return
+}
+
 // checks if the given rune is in the map
 func isin(m map[rune]struct{}, r rune) bool {
 	_, ok := m[r]
@@ -24,7 +35,7 @@ func isin(m map[rune]struct{}, r rune) bool {
 // the standard dump format for a numpy array is
 func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float32) {
 
-	//log.Printf("shapeJSON: %v\n\npatternJSON: %v\n\n", shapeJSON, patternJSON)
+	//DPrintf("shapeJSON: %v\n\npatternJSON: %v\n\n", shapeJSON, patternJSON)
 
 	// parse the shape of the tensor and create it
 	re := regexp.MustCompile(`\d+`)
@@ -37,8 +48,8 @@ func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float3
 		}
 	}
 
-	//log.Printf("shapestrings: %v\n", shapeStrings)
-	//log.Printf("shape: %v\n", shape)
+	//DPrintf("shapestrings: %v\n", shapeStrings)
+	//DPrintf("shape: %v\n", shape)
 	pattern = etensor.NewFloat32(shape, nil, nil)
 
 	// create an n-d coordinate tracking where we're inserting data
@@ -72,14 +83,14 @@ func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float3
 
 				// only accepting binary input currently
 				if float32(r-'0') != 1.0 && float32(r-'0') != 0.0 {
-					log.Printf("expected 0 or 1, got %v\n", float32(r-'0'))
+					DPrintf("expected 0 or 1, got %v\n", float32(r-'0'))
 					panic("Number not 0 or 1 in input")
 				}
 			}
 		}
 	}
 
-	//log.Printf("Pattern: %v\n", pattern)
+	//DPrintf("Pattern: %v\n", pattern)
 
 	return pattern
 }

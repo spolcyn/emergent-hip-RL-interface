@@ -8,29 +8,32 @@ import (
 	"fmt"
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etensor"
-	"log"
 	"time"
 )
 
-// Update the data used for training the model
+// Update the data used for training/testing the model and re-init the network
 func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 
-	//log.Printf("update: %v\n", update)
+	//DPrintf("update: %v\n", update)
+	var err error = nil
 
 	// update dataset from file
 	if update.Source == "file" {
-		log.Printf("updating training data with file: %v\n", update.Filename)
-		err := ss.OpenPatComma(ss.TrainAB, update.Filename, "TrainAB", "AB Training Patterns")
-		return err
+		DPrintf("updating training data with file: %v\n", update.Filename)
+		err = ss.OpenPatComma(ss.TrainAB, update.Filename, "Training Patterns", "Not really AB Training Patterns")
+		if err == nil {
+			return err
+		}
+		err = ss.OpenPatComma(ss.TestAB, update.Filename, "Testing Patterns", "Same as Training Patterns")
 	} else if update.Source == "body" {
-		//log.Printf("pattern len: %v\n", len(update.Patterns))
-		//log.Printf("body: \n\n%v\n", update.Patterns)
-		log.Printf("updating training data with %v patterns\n", len(update.Patterns))
+		//DPrintf("pattern len: %v\n", len(update.Patterns))
+		//DPrintf("body: \n\n%v\n", update.Patterns)
+		DPrintf("updating training data with %v patterns\n", len(update.Patterns))
 
 		// parse patterns to array of etensors
 		pats := make([]*etensor.Float32, len(update.Patterns))
 		for i, jsonPat := range update.Patterns {
-			//log.Printf("parsing:\n\n%v\n\nwith shape: %v\n", v, update.Shape)
+			//DPrintf("parsing:\n\n%v\n\nwith shape: %v\n", v, update.Shape)
 			pats[i] = ParseTensorFromJSON(update.Shape, jsonPat)
 		}
 
@@ -42,7 +45,7 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 		// get pattern shape and compute column shape
 		patShape := pats[0].Shape.Shp
 		colShape := append([]int{len(pats)}, patShape...)
-		//log.Printf("Patshape: %v || Colshape: %v", patShape, colShape)
+		//DPrintf("Patshape: %v || Colshape: %v", patShape, colShape)
 
 		// setup columns for filling
 		rowNames := etensor.NewString([]int{len(pats)}, nil, []string{"row"})
@@ -50,12 +53,12 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 
 		// copy array of patterns into a single etensor column
 		for i, tsr := range pats {
-			//log.Printf("i: %v || tsr: \n%v\n", i, tsr)
+			//DPrintf("i: %v || tsr: \n%v\n", i, tsr)
 			rowNames.Set1D(i, fmt.Sprintf("trn-%v", i))
 			col.SubSpace([]int{i}).CopyFrom(tsr)
 		}
 
-		//log.Printf("Column: \n\n%v\n\n", col)
+		//DPrintf("Column: \n\n%v\n\n", col)
 
 		// add the patterns to the table
 		trainpats.AddCol(rowNames, "Name")
@@ -63,27 +66,23 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 		trainpats.AddCol(col, "ECout")
 
 		// Set training etable in model
-		//log.Printf("\n\nTrainAB BEFORE\n\n%v\n", ss.TrainAB)
+		//DPrintf("\n\nTrainAB BEFORE\n\n%v\n", ss.TrainAB)
 		ss.TrainAB = trainpats
-		//log.Printf("\n\nTrainAB AFTER\n\n%v\n", ss.TrainAB)
+		ss.TestAB = trainpats
+		//DPrintf("\n\nTrainAB AFTER\n\n%v\n", ss.TrainAB)
 
-		//log.Printf("parsed patterns:\n\n%v\n", pats)
+		// re-init model
+		ss.Init()
 
-		return nil
+		DPrintf("\n\nTrain Env AFTER: %v\n\n%v\n", ss.TrainEnv)
+		DPrintf("\n\nTest Env AFTER: %v\n\n%v\n", ss.TestEnv)
+
+		//DPrintf("parsed patterns:\n\n%v\n", pats)
 	} else {
 		return errors.New("Invalid update method")
 	}
-}
 
-/* Update the data used for comparing output patterns to for error determination */
-func (ss *Sim) RestUpdateInputPatternData(update *DatasetUpdate) error {
-	log.Printf("updating input patterns data with file: %v\n", update.Filename)
-
-	// as it turns out, TestAB is where the IdxView for the TestItem comes from, so we need to update that
-	// NOTE: for now, we're still opening InputPatterns as well, but long-term that shouldn't happen
-	ss.OpenPatComma(ss.InputPatterns, update.Filename, "InputPatterns", "Input Patterns")
-
-	return nil
+	return err
 }
 
 /* Test an item */
@@ -93,7 +92,7 @@ func (ss *Sim) RestTestPattern(tr *TestRequest) (*NameError, error) {
 	}
 
 	ss.IsRunning = true
-	log.Printf("testing pattern: %v\n", tr.Pattern)
+	DPrintf("testing pattern: %v\n", tr.Pattern)
 
 	// setup the environment as we want it
 	tsr := ParseTensorFromJSON(tr.Shape, tr.Pattern)

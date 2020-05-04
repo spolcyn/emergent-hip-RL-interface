@@ -28,7 +28,7 @@ func (hs *HipServer) Init(address string, sim *Sim) {
 	// setup server
 	hs.setupRoutes()
 
-	// setup loggin
+	// setup logging
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	// start server
@@ -80,36 +80,11 @@ func (hs *HipServer) setupRoutes() {
 		hs.mu.Unlock()
 
 		if err == nil {
-			return c.String(http.StatusOK, fmt.Sprintf("Training dataset updated to %v", update.Filename))
+			return c.String(http.StatusOK, fmt.Sprintf("Training dataset updated from source: %v", update.Source))
 		} else {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
 
-	})
-
-	// set the input pattern set for error computations
-	hs.es.PUT("dataset/input/update", func(c echo.Context) error {
-
-		// read in request
-		update := new(DatasetUpdate)
-		if err := c.Bind(update); err != nil {
-			return c.String(http.StatusBadRequest, err.Error())
-		}
-
-		log.Printf("update: %v\n", update)
-
-		if update.Source == "file" {
-			// update dataset
-			hs.mu.Lock()
-			hs.sim.RestUpdateInputPatternData(update)
-			hs.mu.Unlock()
-		} else {
-			log.Printf("body: \n\n%v\n", update.Patterns)
-
-		}
-
-		// finish interaction
-		return c.String(http.StatusOK, fmt.Sprintf("Input pattern dataset updated to %v", update.Filename))
 	})
 
 	// test an item
@@ -132,7 +107,7 @@ func (hs *HipServer) setupRoutes() {
 			jsonNE, err2 := json.Marshal(nameError)
 
 			if err2 != nil {
-				log.Printf("JSON encoding error, %v", err2.Error())
+				DPrintf("JSON encoding error, %v", err2.Error())
 			}
 
 			return c.String(http.StatusOK, string(jsonNE))

@@ -1,4 +1,5 @@
 # api.py
+# Author: Stephen Polcyn
 # Provides the Python API for interacting with the hippocampus model
 
 import requests
@@ -6,6 +7,7 @@ import time
 import random
 import numpy as np
 import json
+import logging
 
 SERVER_URL="http://localhost"
 PORT="1323"
@@ -13,8 +15,7 @@ PORT="1323"
 class HipAPI:
 
     def __init__(self):
-        # do nothing
-        print("Creating API")
+        logging.info("Creating API")
 
     def MakeURLString(self, api_endpoint):
         """Makes the full request URL for an API request
@@ -33,9 +34,7 @@ class HipAPI:
 
         response = requests.request(verb, url=url, data=data)
 
-        # success = (response.status_code == 200) # check if request was sucessful
-
-        return response, (response == True)
+        return response, (response.status_code < 400)
 
     # update training data file to filename
     def UpdateTrainingDataFile(self, filename):
@@ -62,13 +61,7 @@ class HipAPI:
         # configure request body
         data = {"source":"body", "patterns":jsonpats, "shape": json.dumps(patterns[0].shape)}
 
-        response, success = self.MakeRequest('PUT', self.MakeURLString(api_endpoint), data)
-
-        # process response
-        if not sucess:
-            print("ERROR")
-        else:
-            print(response.text)
+        return self.MakeRequest('PUT', self.MakeURLString(api_endpoint), data)
 
     # updates input pattern data file to filename
     def UpdateInputData(self, filename):
@@ -93,18 +86,20 @@ class HipAPI:
 
         return self.MakeRequest('POST', self.MakeURLString(api_endpoint), d)
 
-    def StartTraining(self, parameters):
+    def StartTraining(self, maxruns = 1, maxepcs = 50):
         """
         Starts model training from scratch.
 
         Args:
-            parameters: Dictionary of parameters to specify. If none, default settings will be used. Valid parameters are "maxruns" and "maxepcs".
+            maxruns: Number of model runs to perform (independent times to retrain)
+            maxecps: Number of epochs per run (epoch: train/test cycle with each item in test set)
         """
+        logging.debug("Starting training with parameters maxruns: %i, maxepcs: %i", maxruns, maxepcs)
 
-        if "maxruns" not in parameters.keys():
-            parameters["maxruns"] = 1
-        if "maxepcs" not in parameters.keys():
-            parameters["maxepcs"] = 50
+        # configure parameters
+        parameters = {}
+        parameters["maxruns"] = maxruns
+        parameters["maxepcs"] = maxepcs
 
         api_endpoint = "/model/train"
 
@@ -127,7 +122,7 @@ class HipAPI:
             for j, cue in enumerate(cues):
                 response = self.TestPattern(cue)
                 distance = json.loads(response)["Distance"]
-                reward = np.size(cue) - distance # max reward is size of the pattern -- could normalize
+                reward = np.size(cue) - distance # max reward is size of the pattern (when distance = 0) -- could normalize
                 rewards[i][j] = reward
 
         return np.mean(rewards)
@@ -137,14 +132,14 @@ class HipAPI:
 # to where the dataset is.
 hipapi = HipAPI()
 
-TEST_TESTITEM = True
+TEST_TESTITEM = False
 TEST_STEP = False
 TEST_STARTTRAINING = False
 TEST_UTP = False
 
 if TEST_STARTTRAINING:
-    response = hipapi.StartTraining({"maxruns":1, "maxepcs":50, "yeet":10})
-    print(response)
+    response, success = hipapi.StartTraining(maxruns = 1, maxepcs = 50)
+    print(response.text)
 
 # response = hipapi.UpdateTrainingData("datasets/no_context/wheedata.csv")
 # print(response)

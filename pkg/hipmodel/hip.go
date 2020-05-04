@@ -715,14 +715,20 @@ func (ss *Sim) MemStats(train bool) {
 			ss.Mem = 0
 		}
 	} else { // test // SP: This looks like name error test computation
-		if cmpN > 0 { // should be
+		//if cmpN > 0 { // should be -- SP: But might not, if we use train patterns as test patterns
+		// SP Mod: still execute the mem-setting portion and the division
+		if cmpN <= 0 {
+			trgOnWasOffCmp = 0
+		} else {
+			//DPrintf("Target On Was Off Cmp: %v; cmpN: %v", trgOnWasOffCmp, cmpN)
 			trgOnWasOffCmp /= cmpN
-			if trgOnWasOffCmp < ss.MemThr && trgOffWasOn < ss.MemThr {
-				ss.Mem = 1
-			} else {
-				ss.Mem = 0
-			}
 		}
+		if trgOnWasOffCmp < ss.MemThr && trgOffWasOn < ss.MemThr {
+			ss.Mem = 1
+		} else {
+			ss.Mem = 0
+		}
+		//}
 	}
 	ss.TrgOnWasOffAll = trgOnWasOffAll
 	ss.TrgOnWasOffCmp = trgOnWasOffCmp
