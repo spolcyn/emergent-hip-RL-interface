@@ -83,17 +83,17 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 
 	// get activations
 	outPattern := etensor.NewFloat32(ecout.Shape().Shp, nil, nil)
-	ecout.UnitValsTensor(outPattern, "Act")
+	ecout.UnitValsTensor(outPattern, "ActM") // get minus-phase activity
 
 	//DPrintf("Outpattern:\n\n%v", outPattern)
 
 	distance := math.MaxInt32
 	var mostSimilar *etensor.Float32
 
-	// find closest pattern in the dataset to the output pattern
-	for i := 0; i < ss.TestAB.NumRows(); i++ {
+	// find closest pattern in the training dataset to the output pattern
+	for i := 0; i < ss.TrainAB.NumRows(); i++ {
 
-		tmpPattern := ss.TestAB.ColByName("Input").SubSpace([]int{0}).(*etensor.Float32)
+		tmpPattern := ss.TrainAB.ColByName("Input").SubSpace([]int{i}).(*etensor.Float32)
 		tmpDistance := CalculateDistance(outPattern, tmpPattern)
 
 		if tmpDistance < distance {
@@ -111,23 +111,25 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 // updates the testenv with a pattern so that the index 0 of the testenv will return the test pattern
 // for use with testing a very specific, arbitrary pattern that can't be pre-loaded in a dataset
 // because we have no idea what the cortex model is going to send at us
-func (ss *Sim) UpdateEnvWithTestPattern(tsr *etensor.Float32) {
+func (ss *Sim) UpdateTestEnvWithTestPatterns(corrPattern, targPattern *etensor.Float32) {
 
-	//var env env.FixedTable = ss.TestEnv
+	DPrintf("Test Tensor: \n%v\nTarget: \n%v\n", corrPattern, targPattern)
 
-	DPrintf("Test Tensor: \n%v\n", tsr)
+	// create columns to put patterns in as rows
+	corrColWrap := etensor.NewFloat32(append([]int{1}, corrPattern.Shape.Shp...), nil, []string{"row"})
+	corrColWrap.SubSpace([]int{0}).CopyFrom(corrPattern)
+	targColWrap := etensor.NewFloat32(append([]int{1}, targPattern.Shape.Shp...), nil, []string{"row"})
+	targColWrap.SubSpace([]int{0}).CopyFrom(targPattern)
 
-	// create column to put tensor in as row and rownames
-	colWrap := etensor.NewFloat32(append([]int{1}, tsr.Shape.Shp...), nil, []string{"row"})
-	colWrap.SubSpace([]int{0}).CopyFrom(tsr)
 	rowNames := etensor.NewString([]int{1}, nil, []string{"row"})
+	rowNames.Set1D(0, "test-pattern")
 
 	// create new etable with pattern
 	table := etable.NewTable("TestPattern")
 	table.SetNumRows(1)
 	table.AddCol(rowNames, "Name")
-	table.AddCol(colWrap, "Input")
-	table.AddCol(colWrap, "ECout")
+	table.AddCol(corrColWrap, "Input")
+	table.AddCol(targColWrap, "ECout")
 
 	DPrintf("TestAB Table BEFORE: \n%v\n\n", ss.TestAB)
 
@@ -136,23 +138,10 @@ func (ss *Sim) UpdateEnvWithTestPattern(tsr *etensor.Float32) {
 
 	DPrintf("TestAB Table AFTER: \n%v\n\n", ss.TestAB)
 
+	// update test environment
 	ss.ConfigEnv()
 
 	DPrintf("Test Env: \n%v\n\n", ss.TestEnv)
-	/*
-		// create index view from etable for TestEnv.Table
-		env.Table = etable.NewIdxView(table)
-
-		// set TestEnv Sequential
-		env.Sequential = true
-
-		// Valdiate TestEnv
-		env.Validate()
-
-		// Init TestEnv
-		env.Init(0)
-	*/
-
 }
 
 func SaveVocabToCSV(filename string, vocab patgen.Vocab) {

@@ -9,6 +9,8 @@ import numpy as np
 import json
 import logging
 
+logging.basicConfig(level=logging.INFO)
+
 SERVER_URL="http://localhost"
 PORT="1323"
 
@@ -71,18 +73,22 @@ class HipAPI:
         return self.MakeRequest('PUT', self.MakeURLString(api_endpoint), data)
 
     # tests a pattern
-    def TestPattern(self, pattern):
+    # TODO: Make this method accept a two-tuple of patterns, one corrupted and one as the target
+    def TestPattern(self, corruptedPattern, targetPattern):
         """
         Tests a pattern in the model.
 
-        pattern: Numpy array representing a 2-D pattern. Numpy array MUST be integers.
+        corruptedPattern: Numpy array representing a 2-D pattern with data removed. Numpy array MUST be integers.
+        targetPattern: Numpy array representing a 2-D pattern with all original data. Numpy array MUST be integers.
 
-        Returns: The pattern (with all emergent etensor properties, including shape, stride, dimension names, and values) to which the recall is most similar and the Hamming distance between the recalled pattern and the most similar pattern.
+        Returns: The pattern (with all emergent etensor properties, including shape, stride, dimension names, and values) to which the recall is most similar and the Hamming distance between the recalled pattern and the target pattern.
         """
 
         api_endpoint = "/model/testpattern"
 
-        d = {'shape': json.dumps(pattern.shape), 'pattern': json.dumps(np.ndarray.tolist(pattern))}
+        assert corruptedPattern.shape == targetPattern.shape
+
+        d = {'shape': json.dumps(corruptedPattern.shape), 'corruptedPattern': json.dumps(np.ndarray.tolist(corruptedPattern)), 'targetPattern':json.dumps(np.ndarray.tolist(targetPattern))}
 
         return self.MakeRequest('POST', self.MakeURLString(api_endpoint), d)
 

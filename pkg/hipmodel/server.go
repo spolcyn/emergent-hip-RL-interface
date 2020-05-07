@@ -45,8 +45,9 @@ type DatasetUpdate struct {
 }
 
 type TestRequest struct {
-	Shape   string `json:"shape"`   // the pattern's shape
-	Pattern string `json:"pattern"` // the patterns numpy json dump representation
+	Shape            string `json:"shape"`            // the pattern's shape
+	CorruptedPattern string `json:"corruptedPattern"` // the corrupted pattern's numpy json dump representation
+	TargetPattern    string `json:"targetPattern"`    // the target pattern's numpy json dump representation
 }
 
 type TrainRequest struct {
@@ -87,7 +88,7 @@ func (hs *HipServer) setupRoutes() {
 
 	})
 
-	// test an item
+	// test a pattern
 	hs.es.POST("/model/testpattern", func(c echo.Context) error {
 
 		// read in request

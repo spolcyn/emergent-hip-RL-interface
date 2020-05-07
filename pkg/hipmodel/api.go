@@ -92,11 +92,12 @@ func (ss *Sim) RestTestPattern(tr *TestRequest) (*NameError, error) {
 	}
 
 	ss.IsRunning = true
-	DPrintf("testing pattern: %v\n", tr.Pattern)
+	DPrintf("testing pattern: %v\n", tr.CorruptedPattern)
 
 	// setup the environment as we want it
-	tsr := ParseTensorFromJSON(tr.Shape, tr.Pattern)
-	ss.UpdateEnvWithTestPattern(tsr)
+	corrTsr := ParseTensorFromJSON(tr.Shape, tr.CorruptedPattern)
+	targTsr := ParseTensorFromJSON(tr.Shape, tr.TargetPattern)
+	ss.UpdateTestEnvWithTestPatterns(corrTsr, targTsr)
 
 	ss.TestItem(0) // always use 0, that's where we'll put the item
 	ss.IsRunning = false
