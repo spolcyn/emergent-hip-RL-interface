@@ -123,7 +123,7 @@ func (ss *Sim) RestStartTraining(tr *TrainRequest) (string, error) {
 	ss.IsRunning = true
 	go func() { ss.Train(); doneCh <- true }()
 
-	// periodically check to see if the training is done, then return.
+	// wait for training to complete, recording time
 	start := time.Now()
 	<-doneCh
 	end := time.Now()

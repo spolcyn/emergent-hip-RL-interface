@@ -40,8 +40,8 @@ func (hs *HipServer) Init(address string, sim *Sim) {
 type DatasetUpdate struct {
 	Source   string   `json:"method"` // source of the new dataset: "file", if reading from a file, or "body", if transmitted in request body
 	Filename string   `json:"filename"`
-	Patterns []string `json:"patterns"`
-	Shape    string   `json:"shape"` // patterns' shape. all must be the same size
+	Patterns []string `json:"patterns"` // the patterns, with subarrays marked using ( ) to ensure proper JSON parsing
+	Shape    string   `json:"shape"`    // patterns' shape. all must be the same size
 }
 
 type TestRequest struct {
@@ -53,11 +53,6 @@ type TestRequest struct {
 type TrainRequest struct {
 	MaxRuns int `json:"maxruns" query:"maxruns" form:"maxruns"` // max runs to train for
 	MaxEpcs int `json:"maxepcs" query:"maxepcs" form:"maxepcs`  // max epochs to train for
-}
-
-type TestReturn struct {
-	closestPatternID int
-	distance         int
 }
 
 /*** END API-Related Data Types ***/

@@ -9,7 +9,7 @@ import numpy as np
 import json
 import logging
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 SERVER_URL="http://localhost"
 PORT="1323"
@@ -51,7 +51,7 @@ class HipAPI:
         Update training data to the patterns provided.
 
         Args:
-            patterns: python list of 2-D numpy array patterns
+            patterns: python list of 4-D numpy array patterns
         """
         api_endpoint = "/dataset/train/update"
 
@@ -73,7 +73,6 @@ class HipAPI:
         return self.MakeRequest('PUT', self.MakeURLString(api_endpoint), data)
 
     # tests a pattern
-    # TODO: Make this method accept a two-tuple of patterns, one corrupted and one as the target
     def TestPattern(self, corruptedPattern, targetPattern):
         """
         Tests a pattern in the model.
@@ -136,7 +135,6 @@ class HipAPI:
 # Updates the training data to be drawn from wheedata.csv
 # Filename is given as a relative path from where the model is 
 # to where the dataset is.
-hipapi = HipAPI()
 
 TEST_TESTITEM = False
 TEST_STEP = False
@@ -177,6 +175,7 @@ if TEST_STEP:
     print(reward)
 
 if TEST_UTP:
+    hipapi = HipAPI()
     # testAB's ab_0 pattern
     bitstring = '0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0'
     bitlist = bitstring.split(",") # convert to list
@@ -185,8 +184,8 @@ if TEST_UTP:
     arr = np.asarray(bitlist, dtype="int") # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
-    reward = api.UpdateTrainingDataPatterns([arr, arr, arr, arr, arr, arr])
-    print(reward)
+    response, success = hipapi.UpdateTrainingDataPatterns([arr, arr, arr, arr, arr, arr])
+    print(response.request.body)
 
     # a = np.zeros(10, dtype=int)
     # a[:5] = 1

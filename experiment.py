@@ -27,16 +27,20 @@ def CorruptPattern(pattern, ratio):
 
     corrupted = pattern.copy() # copy to avoid modifying source
 
+    neuronsToCorrupt = np.sum(corrupted) * ratio
+    corruptedNeurons = 0
 
-    corruptUnits = np.random.choice(slots, int(ratio * slots), replace=False)
-    logging.debug("Units to corrupt: %s", str(corruptUnits))
+    # iterate through the pattern, switching the first neuronsToCorrupt
+    # active neurons to inactive
+    for x in np.nditer(corrupted, op_flags = ['readwrite']):
+        if x[...] == 1:
+            x[...] = 0
+            corruptedNeurons += 1
 
-    for u in corruptUnits:
-        row = int(u/shape[1])
-        column = u % shape[1]
-        logging.debug("Row: %i", row)
-        logging.debug("Column: %i", column)
-        corrupted[row][column] = np.zeros((shape[2], shape[3]))
+        logging.debug("Corrupted Neurons: %i, Neurons To Corrupt Total: %i", corruptedNeurons, neuronsToCorrupt)
+
+        if corruptedNeurons == neuronsToCorrupt:
+            break
 
     return corrupted
 
@@ -89,12 +93,13 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     numConditions = int((maxPatterns-minPatterns)/step) + 1 # number of different datasets to use
     results = np.zeros((numConditions, len(corruptionRatios))) # store avg memory for each condition and corruption ratio
 
-    for c in range(numConditions):
+    for c in tqdm(range(numConditions)):
 
         logging.info("Starting condition: %i / %i", c, numConditions)
         start = time.monotonic()
 
         currentData = patternlist[:minPatterns + step * c]
+        logging.debug("CurrentData: %s", currentData)
 
         # send new patterns and train model
         response, success = ha.UpdateTrainingDataPatterns(currentData)
@@ -146,7 +151,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     return results
 
 # setup and run experiment
-logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
 logging.info("Starting")
 start = time.monotonic()
 minPatterns = 2; maxPatterns = 20; step = 2; corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
@@ -171,6 +176,8 @@ arr = arr / 100
 
 results = arr
 """
+
+np.save("results", results)
 
 fig, ax = plt.subplots(1,1, figsize=(9,8))
 print(results.shape)
