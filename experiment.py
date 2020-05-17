@@ -10,6 +10,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from matplotlib import pyplot
 
+# create module logger
 logger = logging.getLogger(__name__)
 
 def CorruptPattern(pattern, ratio):
@@ -17,8 +18,11 @@ def CorruptPattern(pattern, ratio):
     Corrupts a pattern for testing.
 
     Args:
-        pattern: The pattern to corrupt
-        ratio: The amount of information to remove, as a decimal in [0, 1]
+        pattern (4-D Numpy Array): The pattern to corrupt.
+        ratio (float): The amount of information to remove, as a decimal in [0, 1].
+
+    Returns:
+        Numpy array: A copy of the original pattern, corrupted the prescribed amount.
     """
 
     # calc number of units
@@ -45,19 +49,20 @@ def CorruptPattern(pattern, ratio):
 
     return corrupted
 
-def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 10, trainingEpochs = 50, corruptionRatios=[.5]):
+def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 10, trainingEpochs = 50, corruptionRatios=[.5], sparsity = .75) 
     """
     Tests the performance of the model over increasing number of patterns.
 
     Args:
-        maxPatterns: Maximum number of patterns to train on at once
-        minPatterns: Minimum number of patterns to train on at once
-        step: Number of patterns to increase by for each new trial
-        trials: Number of times to test each item per condition (results averaged over trials for each item to give total per performance in given condition)
-        corruptionRatios: Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern.
+        maxPatterns (int): Maximum number of patterns to train on at once.
+        minPatterns (int): Minimum number of patterns to train on at once.
+        step (int): Number of patterns to increase by for each new trial.
+        trials (int): Number of times to test each item per condition (results averaged over trials for each item to give total per performance in given condition).
+        corruptionRatios (Numpy array of floats): Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].
+        sparsity (float): Percentage of neurons as a decimal that should be inactive in the generated patterns.
 
     Returns: 
-        numpy array with % items correctly recalled for each trial size
+        Numpy array: Array contains percentage of items correctly recalled for each trial size.
     """
     
     ha = hipapi.HipAPI()
@@ -77,17 +82,17 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     totalValues = 1
     for v in shape:
         totalValues *= v
-    sparsity = .75 # % of neurons that should be inactive in generated patterns
 
     # create all patterns
     for i in range(maxPatterns):
 
-        # create the pattern
+        # configure pattern
         pat = np.ones(totalValues, dtype=int) 
         pat[:int(totalValues*sparsity)] = 0
         np.random.shuffle(pat)
         pat = np.reshape(pat, tuple(shape))
 
+        # add to list
         patternlist.append(pat)
 
     # run the experiment
@@ -99,16 +104,18 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
         logger.info("Starting condition: %i / %i", c, numConditions)
         start = time.monotonic()
 
+        # slice the amount of patterns currently being used
         currentData = patternlist[:minPatterns + step * c]
         logger.debug("CurrentData: %s", currentData)
 
-        # send new patterns and train model
+        # send new patterns 
         response, success = ha.UpdateTrainingDataPatterns(currentData)
         if success:
             logger.debug("Successful: %s", response.text)
         else:
             logger.debug("Failure, %s, %s", response.status_code, response.text)
 
+        # train model
         response, success = ha.StartTraining(maxepcs=trainingEpochs)
         if success:
             logger.debug("Training Successful: %s", response.text)
@@ -139,6 +146,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
                 results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
 
         results[c] /= trials # normalize across trials
+
         totalTime = time.monotonic() - start
         logger.info("Completed condition %i with %i patterns, average accuracies %s, total time: %f", c, len(currentData), results[c], totalTime)
 
@@ -153,10 +161,11 @@ minPatterns = 2
 maxPatterns = 20 
 step = 2
 corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
+sparsity = .75
 
 # time and run experiment
 start = time.monotonic()
-results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trials = 10, trainingEpochs=1, corruptionRatios=corruptionRatios)
+results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trials = 10, trainingEpochs=1, corruptionRatios=corruptionRatios, sparsity = .75)
 end = time.monotonic()
 
 # report results
