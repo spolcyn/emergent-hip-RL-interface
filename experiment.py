@@ -1,6 +1,7 @@
 # experiment.py
 # Author: Stephen Polcyn
-# Runs various experiments using the hippocampus API
+# Runs an experiment using the Emergent hippocampus Python API
+
 import numpy as np
 import api as hipapi
 import logging
@@ -9,7 +10,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 from matplotlib import pyplot
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def CorruptPattern(pattern, ratio):
     """
@@ -37,7 +38,7 @@ def CorruptPattern(pattern, ratio):
             x[...] = 0
             corruptedNeurons += 1
 
-        logging.debug("Corrupted Neurons: %i, Neurons To Corrupt Total: %i", corruptedNeurons, neuronsToCorrupt)
+        logger.debug("Corrupted Neurons: %i, Neurons To Corrupt Total: %i", corruptedNeurons, neuronsToCorrupt)
 
         if corruptedNeurons == neuronsToCorrupt:
             break
@@ -95,24 +96,24 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
 
     for c in tqdm(range(numConditions)):
 
-        logging.info("Starting condition: %i / %i", c, numConditions)
+        logger.info("Starting condition: %i / %i", c, numConditions)
         start = time.monotonic()
 
         currentData = patternlist[:minPatterns + step * c]
-        logging.debug("CurrentData: %s", currentData)
+        logger.debug("CurrentData: %s", currentData)
 
         # send new patterns and train model
         response, success = ha.UpdateTrainingDataPatterns(currentData)
         if success:
-            logging.debug("Successful: %s", response.text)
+            logger.debug("Successful: %s", response.text)
         else:
-            logging.debug("Failure, %s, %s", response.status_code, response.text)
+            logger.debug("Failure, %s, %s", response.status_code, response.text)
 
         response, success = ha.StartTraining(maxepcs=trainingEpochs)
         if success:
-            logging.debug("Training Successful: %s", response.text)
+            logger.debug("Training Successful: %s", response.text)
         else:
-            logging.debug("Failure, %s", response.text)
+            logger.debug("Failure, %s", response.text)
 
         # run different cue corruption ratios for condition c
         for r_idx, r in enumerate(corruptionRatios):
@@ -131,71 +132,36 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
                     if recallSuccessful:
                         successfulRecalls += 1
 
-                    logging.debug("Closest pattern: %s", closestPattern)
-                    logging.debug("Input pattern: %s", p.reshape((totalValues)).tolist())
-                    logging.debug("Corrupted pattern: %s", corrupted.reshape((totalValues)).tolist())
+                    logger.debug("Closest pattern: %s", closestPattern)
+                    logger.debug("Input pattern: %s", p.reshape((totalValues)).tolist())
+                    logger.debug("Corrupted pattern: %s", corrupted.reshape((totalValues)).tolist())
 
                 results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
 
         results[c] /= trials # normalize across trials
         totalTime = time.monotonic() - start
-        logging.info("Completed condition %i with %i patterns, average accuracies %s, total time: %f", c, len(currentData), results[c], totalTime)
-
-    # build results dict
-    """
-    rd = {}
-    for i in range(numConditions):
-        rd[minPatterns + step * i] = results[i]
-    """
+        logger.info("Completed condition %i with %i patterns, average accuracies %s, total time: %f", c, len(currentData), results[c], totalTime)
 
     return results
 
-# setup and run experiment
+# setup logging
 logging.basicConfig(level=logging.DEBUG)
-logging.info("Starting")
+logger.info("Starting")
+
+# setup parameters
+minPatterns = 2
+maxPatterns = 20 
+step = 2
+corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
+
+# time and run experiment
 start = time.monotonic()
-minPatterns = 2; maxPatterns = 20; step = 2; corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
 results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trials = 10, trainingEpochs=1, corruptionRatios=corruptionRatios)
+end = time.monotonic()
 
 # report results
-end = time.monotonic()
 print("Finished in", end - start, "seconds")
 print("Results:", results)
 
-# plot
-"""
-lists = sorted(d.items())
-x, y = zip(*lists)
-plt.plot(x,y)
-plt.show()
-"""
-"""
-arr = np.arange(100)
-arr = arr.reshape((10,10))
-arr = arr / 100
-
-results = arr
-"""
-
+# save results for use with plot.py
 np.save("results", results)
-
-fig, ax = plt.subplots(1,1, figsize=(9,8))
-print(results.shape)
-img = ax.imshow(results, aspect='auto', cmap='Reds', interpolation='none')
-fig.colorbar(img)
-#ax.set_ylim(bottom = 0, top = results.shape[0])
-
-y_labels = [str(i) for i in np.arange(minPatterns, maxPatterns + 1, step)]
-ax.set_yticks(range(int((maxPatterns-minPatterns)/step) + 1))
-ax.set_yticklabels(y_labels)
-
-x_labels = np.around(corruptionRatios, 1)
-ax.set_xticks(range(len(corruptionRatios)))
-ax.set_xticklabels(x_labels)
-
-ax.set_ylabel("Number of Patterns")
-ax.set_xlabel("Corruption Ratio")
-ax.set_title("Recall Accuracy as Function of Number of Patterns and Corruption Ratio")
-        
-
-plt.show()

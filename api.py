@@ -9,78 +9,100 @@ import numpy as np
 import json
 import logging
 
-logging.basicConfig(level=logging.DEBUG)
-
+# basic default parameters for the model server
 SERVER_URL="http://localhost"
 PORT="1323"
 
 class HipAPI:
 
     def __init__(self):
-        logging.info("Creating API")
+        # configure the module logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("Initializing API")
 
     def MakeURLString(self, api_endpoint):
-        """Makes the full request URL for an API request
+        """
+        Makes the full request URL for an API request from an endpoint URL.
 
-        parameters:
-        api_endpoint (string): The path for the endpoint, starting with '/'
+        Args:
+            api_endpoint (string): The path for the endpoint, starting with '/'
+
+        Returns:
+            string: The full request URL for the API endpoint.
         """
 
         return SERVER_URL + ":" + PORT + api_endpoint
 
-    # wrap error handling
     def MakeRequest(self, verb, url, data):
-        # make request and ensure response went through ok by raising an error if 
-        # bad HTTP response code (4XX or 5XX)
-        # nothing happens if request was successful
+        """
+        Send an HTTP request using the provided parameters and format response into desired tuple. 
+
+        Args:
+           verb (string): The HTTP verb to use (e.g., GET, POST, PUT)
+           url (string): The full URL to send the HTTP request to, including the REST endpoint
+           data (dict): The data to send in the body of the request as JSON.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+        """
 
         response = requests.request(verb, url=url, data=data)
 
-        return response, (response.status_code < 400)
+        return response, response.ok
 
-    # update training data file to filename
     def UpdateTrainingDataFile(self, filename):
+        """
+        Update the model's training data.
+
+        Args:
+            filename (string): Full path to the Emergent-formatted CSV file containing the training patterns. Must have both Input and ECout patterns.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+        """
+
         api_endpoint = "/dataset/train/update"
         data = {"source":"file", "filename":filename}
 
         return self.MakeRequest('PUT', self.MakeURLString(api_endpoint), data)
 
-    # update training data to the patterns provided
     def UpdateTrainingDataPatterns(self, patterns):
         """
         Update training data to the patterns provided.
 
         Args:
-            patterns: python list of 4-D numpy array patterns
+            patterns (list of 4-D Numpy arrays): The patterns to train the model on.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
         """
+
         api_endpoint = "/dataset/train/update"
 
-        # format the list of numpy arrays into a format parseable by the backend
+        # Format the list of numpy arrays into a format parseable by the backend
+        # Without replacing square brackets with parantheses, the JSON parser sometimes
+        #   parses each subarray to an individual array, instead of leaving it as the
+        #   representation of an n-d array
         jsonpats = [json.dumps(np.ndarray.tolist(p)) for p in patterns]
         jsonpats = [p.replace('[', '(') for p in jsonpats]
         jsonpats = [p.replace(']', ')') for p in jsonpats]
 
-        # configure request body
         data = {"source":"body", "patterns":jsonpats, "shape": json.dumps(patterns[0].shape)}
 
         return self.MakeRequest('PUT', self.MakeURLString(api_endpoint), data)
 
-    # updates input pattern data file to filename
-    def UpdateInputData(self, filename):
-        api_endpoint = "/dataset/input/update"
-        data = {"filename":filename}
-
-        return self.MakeRequest('PUT', self.MakeURLString(api_endpoint), data)
-
-    # tests a pattern
     def TestPattern(self, corruptedPattern, targetPattern):
         """
-        Tests a pattern in the model.
+        Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.
 
-        corruptedPattern: Numpy array representing a 2-D pattern with data removed. Numpy array MUST be integers.
-        targetPattern: Numpy array representing a 2-D pattern with all original data. Numpy array MUST be integers.
+        Args:
+            corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
+            targetPattern (4-D Numpy integer array): Complete original pattern with no data removed. 
 
-        Returns: The pattern (with all emergent etensor properties, including shape, stride, dimension names, and values) to which the recall is most similar and the Hamming distance between the recalled pattern and the target pattern.
+        Returns: 
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+            1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
+            2) The Hamming distance between the recalled pattern and the target pattern.
         """
 
         api_endpoint = "/model/testpattern"
@@ -93,15 +115,19 @@ class HipAPI:
 
     def StartTraining(self, maxruns = 1, maxepcs = 50):
         """
-        Starts model training from scratch.
+        Starts model training from scratch. This method will wait until the training is complete, so it could take some time.
 
         Args:
-            maxruns: Number of model runs to perform (independent times to retrain)
-            maxecps: Number of epochs per run (epoch: train/test cycle with each item in test set)
-        """
-        logging.debug("Starting training with parameters maxruns: %i, maxepcs: %i", maxruns, maxepcs)
+            maxruns (int): Number of model runs to perform (independent times to retrain)
+            maxecps (int): Number of epochs per run (epoch: train/test cycle with each item in test set)
 
-        # configure parameters
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+            1) A string with information about the training time and parameters
+        """
+        self.logger.debug("Starting training with parameters maxruns: %i, maxepcs: %i", maxruns, maxepcs)
+
+        # configure parameters dict
         parameters = {}
         parameters["maxruns"] = maxruns
         parameters["maxepcs"] = maxepcs
@@ -110,31 +136,35 @@ class HipAPI:
 
         return self.MakeRequest('POST', self.MakeURLString(api_endpoint), parameters)
 
-    def Step(self, cues, iterations):
+    def Step(self, cues, targets, iterations):
         """
-        Steps the model forward one cycle. Similar to OpenAI gym's RL setup. Model must be trained prior to calling "step".
+        Steps the model forward one cycle. Similar to OpenAI gym's RL setup. Model must be trained prior to calling "step". 
+        Generally, this method should be re-implemented for an RL environment using the basic API methods. 
+        This method can serve as a useful template for creating such methods.
+
         Args:
-            cues: python list of 2-d patterns to be tested
-            iterations: number of tests to perform on each pattern
+            cues (Python list of 2-D Numpy arrays): Partial patterns to be tested.
+            targets (Python list of 2-D Numpy arrays): Original patterns to be compared.
+            iterations (int): Number of tests to perform on each pattern.
 
         Returns:
-            observation (The pattern recalled) and reward (based on recall accuracy)
+            Numpy array: The average reward for the step.
         """
 
         rewards = np.zeros((iterations, len(cues)))
 
         for i in range(iterations):
             for j, cue in enumerate(cues):
-                response = self.TestPattern(cue)
-                distance = json.loads(response)["Distance"]
+                response, success = self.TestPattern(cue, targets[j])
+                distance = json.loads(response.text)["Distance"] # extract the distance from the response
                 reward = np.size(cue) - distance # max reward is size of the pattern (when distance = 0) -- could normalize
                 rewards[i][j] = reward
 
         return np.mean(rewards)
 
-# Updates the training data to be drawn from wheedata.csv
-# Filename is given as a relative path from where the model is 
-# to where the dataset is.
+# -------------------------------------------------------------------------------- #
+# A variety of sample API interactions that demonstrate simple functionality
+# -------------------------------------------------------------------------------- #
 
 TEST_TESTITEM = False
 TEST_STEP = False
@@ -142,54 +172,42 @@ TEST_STARTTRAINING = False
 TEST_UTP = False
 
 if TEST_STARTTRAINING:
-    response, success = hipapi.StartTraining(maxruns = 1, maxepcs = 50)
-    print(response.text)
-
-# response = hipapi.UpdateTrainingData("datasets/no_context/wheedata.csv")
-# print(response)
-# response = hipapi.UpdateInputData("datasets/no_context/wheedata.csv")
-# print(response)
+    tst_hipapi = HipAPI()
+    response, success = tst_hipapi.StartTraining(maxruns = 1, maxepcs = 50)
+    print("Test Start Training\n", response.text)
 
 if TEST_TESTITEM:
+    tti_hipapi = HipAPI()
     # testAB's ab_0 pattern
     bitstring = '0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0'
     bitlist = bitstring.split(",") # convert to list
     bitlist = [int(x) for x in bitlist] # convert to ints
-    #bitlist = bitlist[144:] # get just test pattern
     arr = np.asarray(bitlist, dtype="int") # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
-    response, success = hipapi.TestPattern(arr)
-    print(response.text)
+    response, success = tti_hipapi.TestPattern(arr, arr)
+    print("Test Item\n", response.text)
 
 if TEST_STEP:
+    ts_hipapi = HipAPI()
     # testAB's ab_0 pattern
     bitstring = '0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0'
     bitlist = bitstring.split(",") # convert to list
     bitlist = [int(x) for x in bitlist] # convert to ints
-    #bitlist = bitlist[144:] # get just test pattern
     arr = np.asarray(bitlist, dtype="int") # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
-    reward = hipapi.Step([arr], 5)
-    print(reward)
+    reward = ts_hipapi.Step([arr], [arr], 5)
+    print("Test Step\n", reward)
 
 if TEST_UTP:
-    hipapi = HipAPI()
+    utp_hipapi = HipAPI()
     # testAB's ab_0 pattern
     bitstring = '0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0'
     bitlist = bitstring.split(",") # convert to list
     bitlist = [int(x) for x in bitlist] # convert to ints
-    #bitlist = bitlist[144:] # get just test pattern
     arr = np.asarray(bitlist, dtype="int") # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
-    response, success = hipapi.UpdateTrainingDataPatterns([arr, arr, arr, arr, arr, arr])
-    print(response.request.body)
-
-    # a = np.zeros(10, dtype=int)
-    # a[:5] = 1
-    # np.random.shuffle(a)
-    # a = a.reshape((2,5))
-    # print(a)
-
+    response, success = utp_hipapi.UpdateTrainingDataPatterns([arr, arr, arr, arr, arr, arr])
+    print("Test UTP\n", response.request.body)
