@@ -36,7 +36,7 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 		// parse patterns to array of etensors
 		pats := make([]*etensor.Float32, len(update.Patterns))
 		for i, jsonPat := range update.Patterns {
-			DPrintf("parsing:\n\n%v\n\nwith shape: %v\n", v, update.Shape)
+			DPrintf("parsing:\n\n%v\n\nwith shape: %v\n", jsonPat, update.Shape)
 			pats[i] = ParseTensorFromJSON(update.Shape, jsonPat)
 		}
 
