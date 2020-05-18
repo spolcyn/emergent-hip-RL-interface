@@ -49,7 +49,7 @@ def CorruptPattern(pattern, ratio):
 
     return corrupted
 
-def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 10, trainingEpochs = 50, corruptionRatios=[.5], sparsity = .75) 
+def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 10, trainingEpochs = 50, corruptionRatios = [.5], sparsity = 0.75):
     """
     Tests the performance of the model over increasing number of patterns.
 
@@ -64,7 +64,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     Returns: 
         Numpy array: Array contains percentage of items correctly recalled for each trial size.
     """
-    
+
     ha = hipapi.HipAPI()
 
     # ensure valid range specified
@@ -135,7 +135,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
 
                     closestPattern = response.json()["ClosestPattern"]["Values"] # returned as list
                     recallSuccessful = (closestPattern == p.reshape((totalValues)).tolist()) # test if the closest pattern is the same as the target
-                    
+
                     if recallSuccessful:
                         successfulRecalls += 1
 
