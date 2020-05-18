@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.8.1" />
+<title>experiment API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>experiment</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python"># experiment.py
+# Author: Stephen Polcyn
+# Runs an experiment using the Emergent hippocampus Python API
+
+import numpy as np
+import api as hipapi
+import logging
+import time
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+from matplotlib import pyplot
+
+# create module logger
+logger = logging.getLogger(__name__)
+
+def CorruptPattern(pattern, ratio):
+    &#34;&#34;&#34;
+    Corrupts a pattern for testing.
+
+    Args:
+        pattern (4-D Numpy Array): The pattern to corrupt.
+        ratio (float): The amount of information to remove, as a decimal in [0, 1].
+
+    Returns:
+        Numpy array: A copy of the original pattern, corrupted the prescribed amount.
+    &#34;&#34;&#34;
+
+
+    # calc number of units
+    shape = list(pattern.shape)
+    assert len(shape) == 4 # ensure its a 4-d array
+    slots = shape[0] * shape[1]
+
+    corrupted = pattern.copy() # copy to avoid modifying source
+
+    neuronsToCorrupt = int(np.sum(corrupted) * ratio)
+    corruptedNeurons = 0
+
+    logger.debug(&#34;Corrupting pattern with ratio %f, total neurons to corrupt: %i&#34;, ratio, neuronsToCorrupt)
+
+    # iterate through the pattern, switching the first neuronsToCorrupt
+    # active neurons to inactive
+    for x in np.nditer(corrupted, op_flags = [&#39;readwrite&#39;]):
+        logger.debug(&#34;Corrupted Neurons: %i, Neurons To Corrupt Total: %i&#34;, corruptedNeurons, neuronsToCorrupt)
+
+        if (corruptedNeurons == neuronsToCorrupt):
+            break
+
+        # if not complete, try to corrupt one
+        if x[...] == 1:
+            x[...] = 0
+            corruptedNeurons += 1
+
+    return corrupted
+
+def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 10, trainingEpochs = 50, corruptionRatios = [.5], sparsity = 0.75):
+    &#34;&#34;&#34;
+    Tests the performance of the model over increasing number of patterns.
+
+    Args:
+        maxPatterns (int): Maximum number of patterns to train on at once.
+        minPatterns (int): Minimum number of patterns to train on at once.
+        step (int): Number of patterns to increase by for each new trial.
+        trials (int): Number of times to test each item per condition (results averaged over trials for each item to give total per performance in given condition).
+        trainingEpochs (int): Number of epochs to train the model for when training on each dataset.
+        corruptionRatios (Numpy array of floats): Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].
+        sparsity (float): Percentage of neurons as a decimal that should be inactive in the generated patterns.
+
+    Returns: 
+        Numpy array: Array contains percentage of items correctly recalled for each trial size.
+    &#34;&#34;&#34;
+
+    ha = hipapi.HipAPI()
+
+    # ensure valid range specified
+    if (maxPatterns - minPatterns) % step != 0:
+        print(&#34;maxPattern is not minPattern + step * (some integer)&#34;)
+        return
+    if minPatterns &lt; 1:
+        print(&#34;minPatterns is too small (value:&#34;, minPatterns, &#34;)&#34;)
+        return
+
+    patternlist = []
+
+    # config pattern shape-related properties
+    shape = [6,2,3,4] 
+    totalValues = 1
+    for v in shape:
+        totalValues *= v
+
+    # create all patterns
+    for i in range(maxPatterns):
+
+        # configure pattern
+        pat = np.ones(totalValues, dtype=int) 
+        pat[:int(totalValues*sparsity)] = 0
+        np.random.shuffle(pat)
+        pat = np.reshape(pat, tuple(shape))
+
+        # add to list
+        patternlist.append(pat)
+
+    # run the experiment
+    numConditions = int((maxPatterns-minPatterns)/step) + 1 # number of different datasets to use
+    results = np.zeros((numConditions, len(corruptionRatios))) # store avg memory for each condition and corruption ratio
+
+    for c in tqdm(range(numConditions)):
+
+        logger.info(&#34;Starting condition: %i / %i&#34;, c, numConditions)
+        start = time.monotonic()
+
+        # slice the amount of patterns currently being used
+        currentData = patternlist[:minPatterns + step * c]
+        logger.debug(&#34;CurrentData: %s&#34;, currentData)
+
+        # send new patterns 
+        response, success = ha.UpdateTrainingDataPatterns(currentData)
+        if success:
+            logger.debug(&#34;Successful: %s&#34;, response.text)
+        else:
+            logger.debug(&#34;Failure, %s, %s&#34;, response.status_code, response.text)
+
+        # train model
+        response, success = ha.StartTraining(maxepcs=trainingEpochs)
+        if success:
+            logger.debug(&#34;Training Successful: %s&#34;, response.text)
+        else:
+            logger.debug(&#34;Failure, %s&#34;, response.text)
+
+        # run different cue corruption ratios for condition c
+        for r_idx, r in enumerate(corruptionRatios):
+            # run trials for condition c and cue corruption ratio r
+            for t in range(trials):
+                # run all patterns within trial
+                successfulRecalls = 0
+
+                for idx, p in enumerate(currentData): 
+                    corrupted = CorruptPattern(p, r)
+                    response, success = ha.TestPattern(corrupted, p)
+
+                    closestPattern = response.json()[&#34;ClosestPattern&#34;][&#34;Values&#34;] # returned as list
+                    recallSuccessful = (closestPattern == p.reshape((totalValues)).tolist()) # test if the closest pattern is the same as the target
+
+                    if recallSuccessful:
+                        successfulRecalls += 1
+
+                    logger.debug(&#34;Closest pattern: %s&#34;, closestPattern)
+                    logger.debug(&#34;Input pattern: %s&#34;, p.reshape((totalValues)).tolist())
+                    logger.debug(&#34;Corrupted pattern: %s&#34;, corrupted.reshape((totalValues)).tolist())
+
+                results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
+
+        results[c] /= trials # normalize across trials
+
+        totalTime = time.monotonic() - start
+        logger.info(&#34;Completed condition %i with %i patterns, average accuracies %s, total time: %f&#34;, c, len(currentData), results[c], totalTime)
+
+    return results
+&#34;&#34;&#34;
+# setup logging
+logging.basicConfig()
+logger.info(&#34;Starting&#34;)
+
+# setup parameters
+minPatterns = 2
+maxPatterns = 20
+step = 2
+corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
+sparsity = .75
+
+# time and run experiment
+start = time.monotonic()
+results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trainingEpochs=5, corruptionRatios=corruptionRatios, sparsity = .75)
+end = time.monotonic()
+
+# report results
+print(&#34;Finished in&#34;, end - start, &#34;seconds&#34;)
+print(&#34;Results:&#34;, results)
+
+# save results for use with plot.py
+np.save(&#34;results&#34;, results)
+&#34;&#34;&#34;</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-functions">Functions</h2>
+<dl>
+<dt id="experiment.CorruptPattern"><code class="name flex">
+<span>def <span class="ident">CorruptPattern</span></span>(<span>pattern, ratio)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Corrupts a pattern for testing.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt>pattern (4-D Numpy Array): The pattern to corrupt.</dt>
+<dt><strong><code>ratio</code></strong> :&ensp;<code>float</code></dt>
+<dd>The amount of information to remove, as a decimal in [0, 1].</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Numpy array</code></dt>
+<dd>A copy of the original pattern, corrupted the prescribed amount.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def CorruptPattern(pattern, ratio):
+    &#34;&#34;&#34;
+    Corrupts a pattern for testing.
+
+    Args:
+        pattern (4-D Numpy Array): The pattern to corrupt.
+        ratio (float): The amount of information to remove, as a decimal in [0, 1].
+
+    Returns:
+        Numpy array: A copy of the original pattern, corrupted the prescribed amount.
+    &#34;&#34;&#34;
+
+
+    # calc number of units
+    shape = list(pattern.shape)
+    assert len(shape) == 4 # ensure its a 4-d array
+    slots = shape[0] * shape[1]
+
+    corrupted = pattern.copy() # copy to avoid modifying source
+
+    neuronsToCorrupt = int(np.sum(corrupted) * ratio)
+    corruptedNeurons = 0
+
+    logger.debug(&#34;Corrupting pattern with ratio %f, total neurons to corrupt: %i&#34;, ratio, neuronsToCorrupt)
+
+    # iterate through the pattern, switching the first neuronsToCorrupt
+    # active neurons to inactive
+    for x in np.nditer(corrupted, op_flags = [&#39;readwrite&#39;]):
+        logger.debug(&#34;Corrupted Neurons: %i, Neurons To Corrupt Total: %i&#34;, corruptedNeurons, neuronsToCorrupt)
+
+        if (corruptedNeurons == neuronsToCorrupt):
+            break
+
+        # if not complete, try to corrupt one
+        if x[...] == 1:
+            x[...] = 0
+            corruptedNeurons += 1
+
+    return corrupted</code></pre>
+</details>
+</dd>
+<dt id="experiment.MemoryVsPatternCount"><code class="name flex">
+<span>def <span class="ident">MemoryVsPatternCount</span></span>(<span>minPatterns=10, maxPatterns=20, step=1, trials=10, trainingEpochs=50, corruptionRatios=[0.5], sparsity=0.75)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Tests the performance of the model over increasing number of patterns.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>maxPatterns</code></strong> :&ensp;<code>int</code></dt>
+<dd>Maximum number of patterns to train on at once.</dd>
+<dt><strong><code>minPatterns</code></strong> :&ensp;<code>int</code></dt>
+<dd>Minimum number of patterns to train on at once.</dd>
+<dt><strong><code>step</code></strong> :&ensp;<code>int</code></dt>
+<dd>Number of patterns to increase by for each new trial.</dd>
+<dt><strong><code>trials</code></strong> :&ensp;<code>int</code></dt>
+<dd>Number of times to test each item per condition (results averaged over trials for each item to give total per performance in given condition).</dd>
+<dt><strong><code>trainingEpochs</code></strong> :&ensp;<code>int</code></dt>
+<dd>Number of epochs to train the model for when training on each dataset.</dd>
+<dt><strong><code>corruptionRatios</code></strong> :&ensp;<code>Numpy array</code> of <code>floats</code></dt>
+<dd>Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].</dd>
+<dt><strong><code>sparsity</code></strong> :&ensp;<code>float</code></dt>
+<dd>Percentage of neurons as a decimal that should be inactive in the generated patterns.</dd>
+<dt><strong><code>Returns</code></strong></dt>
+<dd>Numpy array: Array contains percentage of items correctly recalled for each trial size.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 10, trainingEpochs = 50, corruptionRatios = [.5], sparsity = 0.75):
+    &#34;&#34;&#34;
+    Tests the performance of the model over increasing number of patterns.
+
+    Args:
+        maxPatterns (int): Maximum number of patterns to train on at once.
+        minPatterns (int): Minimum number of patterns to train on at once.
+        step (int): Number of patterns to increase by for each new trial.
+        trials (int): Number of times to test each item per condition (results averaged over trials for each item to give total per performance in given condition).
+        trainingEpochs (int): Number of epochs to train the model for when training on each dataset.
+        corruptionRatios (Numpy array of floats): Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].
+        sparsity (float): Percentage of neurons as a decimal that should be inactive in the generated patterns.
+
+    Returns: 
+        Numpy array: Array contains percentage of items correctly recalled for each trial size.
+    &#34;&#34;&#34;
+
+    ha = hipapi.HipAPI()
+
+    # ensure valid range specified
+    if (maxPatterns - minPatterns) % step != 0:
+        print(&#34;maxPattern is not minPattern + step * (some integer)&#34;)
+        return
+    if minPatterns &lt; 1:
+        print(&#34;minPatterns is too small (value:&#34;, minPatterns, &#34;)&#34;)
+        return
+
+    patternlist = []
+
+    # config pattern shape-related properties
+    shape = [6,2,3,4] 
+    totalValues = 1
+    for v in shape:
+        totalValues *= v
+
+    # create all patterns
+    for i in range(maxPatterns):
+
+        # configure pattern
+        pat = np.ones(totalValues, dtype=int) 
+        pat[:int(totalValues*sparsity)] = 0
+        np.random.shuffle(pat)
+        pat = np.reshape(pat, tuple(shape))
+
+        # add to list
+        patternlist.append(pat)
+
+    # run the experiment
+    numConditions = int((maxPatterns-minPatterns)/step) + 1 # number of different datasets to use
+    results = np.zeros((numConditions, len(corruptionRatios))) # store avg memory for each condition and corruption ratio
+
+    for c in tqdm(range(numConditions)):
+
+        logger.info(&#34;Starting condition: %i / %i&#34;, c, numConditions)
+        start = time.monotonic()
+
+        # slice the amount of patterns currently being used
+        currentData = patternlist[:minPatterns + step * c]
+        logger.debug(&#34;CurrentData: %s&#34;, currentData)
+
+        # send new patterns 
+        response, success = ha.UpdateTrainingDataPatterns(currentData)
+        if success:
+            logger.debug(&#34;Successful: %s&#34;, response.text)
+        else:
+            logger.debug(&#34;Failure, %s, %s&#34;, response.status_code, response.text)
+
+        # train model
+        response, success = ha.StartTraining(maxepcs=trainingEpochs)
+        if success:
+            logger.debug(&#34;Training Successful: %s&#34;, response.text)
+        else:
+            logger.debug(&#34;Failure, %s&#34;, response.text)
+
+        # run different cue corruption ratios for condition c
+        for r_idx, r in enumerate(corruptionRatios):
+            # run trials for condition c and cue corruption ratio r
+            for t in range(trials):
+                # run all patterns within trial
+                successfulRecalls = 0
+
+                for idx, p in enumerate(currentData): 
+                    corrupted = CorruptPattern(p, r)
+                    response, success = ha.TestPattern(corrupted, p)
+
+                    closestPattern = response.json()[&#34;ClosestPattern&#34;][&#34;Values&#34;] # returned as list
+                    recallSuccessful = (closestPattern == p.reshape((totalValues)).tolist()) # test if the closest pattern is the same as the target
+
+                    if recallSuccessful:
+                        successfulRecalls += 1
+
+                    logger.debug(&#34;Closest pattern: %s&#34;, closestPattern)
+                    logger.debug(&#34;Input pattern: %s&#34;, p.reshape((totalValues)).tolist())
+                    logger.debug(&#34;Corrupted pattern: %s&#34;, corrupted.reshape((totalValues)).tolist())
+
+                results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
+
+        results[c] /= trials # normalize across trials
+
+        totalTime = time.monotonic() - start
+        logger.info(&#34;Completed condition %i with %i patterns, average accuracies %s, total time: %f&#34;, c, len(currentData), results[c], totalTime)
+
+    return results</code></pre>
+</details>
+</dd>
+</dl>
+</section>
+<section>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-functions">Functions</a></h3>
+<ul class="">
+<li><code><a title="experiment.CorruptPattern" href="#experiment.CorruptPattern">CorruptPattern</a></code></li>
+<li><code><a title="experiment.MemoryVsPatternCount" href="#experiment.MemoryVsPatternCount">MemoryVsPatternCount</a></code></li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.1</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

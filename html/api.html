@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
+<meta name="generator" content="pdoc 0.8.1" />
+<title>api API documentation</title>
+<meta name="description" content="" />
+<link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
+<link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/styles/github.min.css" rel="stylesheet">
+<style>.flex{display:flex !important}body{line-height:1.5em}#content{padding:20px}#sidebar{padding:30px;overflow:hidden}#sidebar > *:last-child{margin-bottom:2cm}.http-server-breadcrumbs{font-size:130%;margin:0 0 15px 0}#footer{font-size:.75em;padding:5px 30px;border-top:1px solid #ddd;text-align:right}#footer p{margin:0 0 0 1em;display:inline-block}#footer p:last-child{margin-right:30px}h1,h2,h3,h4,h5{font-weight:300}h1{font-size:2.5em;line-height:1.1em}h2{font-size:1.75em;margin:1em 0 .50em 0}h3{font-size:1.4em;margin:25px 0 10px 0}h4{margin:0;font-size:105%}a{color:#058;text-decoration:none;transition:color .3s ease-in-out}a:hover{color:#e82}.title code{font-weight:bold}h2[id^="header-"]{margin-top:2em}.ident{color:#900}pre code{background:#f8f8f8;font-size:.8em;line-height:1.4em}code{background:#f2f2f1;padding:1px 4px;overflow-wrap:break-word}h1 code{background:transparent}pre{background:#f8f8f8;border:0;border-top:1px solid #ccc;border-bottom:1px solid #ccc;margin:1em 0;padding:1ex}#http-server-module-list{display:flex;flex-flow:column}#http-server-module-list div{display:flex}#http-server-module-list dt{min-width:10%}#http-server-module-list p{margin-top:0}.toc ul,#index{list-style-type:none;margin:0;padding:0}#index code{background:transparent}#index h3{border-bottom:1px solid #ddd}#index ul{padding:0}#index h4{margin-top:.6em;font-weight:bold}@media (min-width:200ex){#index .two-column{column-count:2}}@media (min-width:300ex){#index .two-column{column-count:3}}dl{margin-bottom:2em}dl dl:last-child{margin-bottom:4em}dd{margin:0 0 1em 3em}#header-classes + dl > dd{margin-bottom:3em}dd dd{margin-left:2em}dd p{margin:10px 0}.name{background:#eee;font-weight:bold;font-size:.85em;padding:5px 10px;display:inline-block;min-width:40%}.name:hover{background:#e0e0e0}.name > span:first-child{white-space:nowrap}.name.class > span:nth-child(2){margin-left:.4em}.inherited{color:#999;border-left:5px solid #eee;padding-left:1em}.inheritance em{font-style:normal;font-weight:bold}.desc h2{font-weight:400;font-size:1.25em}.desc h3{font-size:1em}.desc dt code{background:inherit}.source summary,.git-link-div{color:#666;text-align:right;font-weight:400;font-size:.8em;text-transform:uppercase}.source summary > *{white-space:nowrap;cursor:pointer}.git-link{color:inherit;margin-left:1em}.source pre{max-height:500px;overflow:auto;margin:0}.source pre code{font-size:12px;overflow:visible}.hlist{list-style:none}.hlist li{display:inline}.hlist li:after{content:',\2002'}.hlist li:last-child:after{content:none}.hlist .hlist{display:inline;padding-left:1em}img{max-width:100%}.admonition{padding:.1em .5em;margin-bottom:1em}.admonition-title{font-weight:bold}.admonition.note,.admonition.info,.admonition.important{background:#aef}.admonition.todo,.admonition.versionadded,.admonition.tip,.admonition.hint{background:#dfd}.admonition.warning,.admonition.versionchanged,.admonition.deprecated{background:#fd4}.admonition.error,.admonition.danger,.admonition.caution{background:lightpink}</style>
+<style media="screen and (min-width: 700px)">@media screen and (min-width:700px){#sidebar{width:30%;height:100vh;overflow:auto;position:sticky;top:0}#content{width:70%;max-width:100ch;padding:3em 4em;border-left:1px solid #ddd}pre code{font-size:1em}.item .name{font-size:1em}main{display:flex;flex-direction:row-reverse;justify-content:flex-end}.toc ul ul,#index ul{padding-left:1.5em}.toc > ul > li{margin-top:.5em}}</style>
+<style media="print">@media print{#sidebar h1{page-break-before:always}.source{display:none}}@media print{*{background:transparent !important;color:#000 !important;box-shadow:none !important;text-shadow:none !important}a[href]:after{content:" (" attr(href) ")";font-size:90%}a[href][title]:after{content:none}abbr[title]:after{content:" (" attr(title) ")"}.ir a:after,a[href^="javascript:"]:after,a[href^="#"]:after{content:""}pre,blockquote{border:1px solid #999;page-break-inside:avoid}thead{display:table-header-group}tr,img{page-break-inside:avoid}img{max-width:100% !important}@page{margin:0.5cm}p,h2,h3{orphans:3;widows:3}h1,h2,h3,h4,h5,h6{page-break-after:avoid}}</style>
+</head>
+<body>
+<main>
+<article id="content">
+<header>
+<h1 class="title">Module <code>api</code></h1>
+</header>
+<section id="section-intro">
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python"># api.py
+# Author: Stephen Polcyn
+# Provides the Python API for interacting with the hippocampus model
+
+import requests
+import time
+import random
+import numpy as np
+import json
+import logging
+
+# basic default parameters for the model server
+SERVER_URL=&#34;http://localhost&#34;
+PORT=&#34;1323&#34;
+
+class HipAPI:
+
+    def __init__(self):
+        # configure the module logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.info(&#34;Initializing API&#34;)
+
+    def MakeURLString(self, api_endpoint):
+        &#34;&#34;&#34;
+        Makes the full request URL for an API request from an endpoint URL.
+
+        Args:
+            api_endpoint (string): The path for the endpoint, starting with &#39;/&#39;
+
+        Returns:
+            string: The full request URL for the API endpoint.
+        &#34;&#34;&#34;
+
+        return SERVER_URL + &#34;:&#34; + PORT + api_endpoint
+
+    def MakeRequest(self, verb, url, data):
+        &#34;&#34;&#34;
+        Send an HTTP request using the provided parameters and format response into desired tuple. 
+
+        Args:
+           verb (string): The HTTP verb to use (e.g., GET, POST, PUT)
+           url (string): The full URL to send the HTTP request to, including the REST endpoint
+           data (dict): The data to send in the body of the request as JSON.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+        &#34;&#34;&#34;
+
+        response = requests.request(verb, url=url, data=data)
+
+        return response, response.ok
+
+    def UpdateTrainingDataFile(self, filename):
+        &#34;&#34;&#34;
+        Update the model&#39;s training data.
+
+        Args:
+            filename (string): Full path to the Emergent-formatted CSV file containing the training patterns. Must have both Input and ECout patterns.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+        &#34;&#34;&#34;
+
+        api_endpoint = &#34;/dataset/train/update&#34;
+        data = {&#34;source&#34;:&#34;file&#34;, &#34;filename&#34;:filename}
+
+        return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)
+
+    def UpdateTrainingDataPatterns(self, patterns):
+        &#34;&#34;&#34;
+        Update training data to the patterns provided.
+
+        Args:
+            patterns (list of 4-D Numpy arrays): The patterns to train the model on.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+        &#34;&#34;&#34;
+
+        api_endpoint = &#34;/dataset/train/update&#34;
+
+        # Format the list of numpy arrays into a format parseable by the backend
+        # Without replacing square brackets with parantheses, the JSON parser sometimes
+        #   parses each subarray to an individual array, instead of leaving it as the
+        #   representation of an n-d array
+        jsonpats = [json.dumps(np.ndarray.tolist(p)) for p in patterns]
+        jsonpats = [p.replace(&#39;[&#39;, &#39;(&#39;) for p in jsonpats]
+        jsonpats = [p.replace(&#39;]&#39;, &#39;)&#39;) for p in jsonpats]
+
+        data = {&#34;source&#34;:&#34;body&#34;, &#34;patterns&#34;:jsonpats, &#34;shape&#34;: json.dumps(patterns[0].shape)}
+
+        return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)
+
+    def TestPattern(self, corruptedPattern, targetPattern):
+        &#34;&#34;&#34;
+        Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.
+
+        Args:
+            corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
+            targetPattern (4-D Numpy integer array): Complete original pattern with no data removed. 
+
+        Returns: 
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+            1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
+            2) The Hamming distance between the recalled pattern and the target pattern.
+        &#34;&#34;&#34;
+
+        api_endpoint = &#34;/model/testpattern&#34;
+
+        assert corruptedPattern.shape == targetPattern.shape
+
+        d = {&#39;shape&#39;: json.dumps(corruptedPattern.shape), &#39;corruptedPattern&#39;: json.dumps(np.ndarray.tolist(corruptedPattern)), &#39;targetPattern&#39;:json.dumps(np.ndarray.tolist(targetPattern))}
+
+        return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), d)
+
+    def StartTraining(self, maxruns = 1, maxepcs = 50):
+        &#34;&#34;&#34;
+        Starts model training from scratch. This method will wait until the training is complete, so it could take some time.
+
+        Args:
+            maxruns (int): Number of model runs to perform (independent times to retrain)
+            maxecps (int): Number of epochs per run (epoch: train/test cycle with each item in test set)
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+            1) A string with information about the training time and parameters
+        &#34;&#34;&#34;
+        self.logger.debug(&#34;Starting training with parameters maxruns: %i, maxepcs: %i&#34;, maxruns, maxepcs)
+
+        # configure parameters dict
+        parameters = {}
+        parameters[&#34;maxruns&#34;] = maxruns
+        parameters[&#34;maxepcs&#34;] = maxepcs
+
+        api_endpoint = &#34;/model/train&#34;
+
+        return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), parameters)
+
+    def Step(self, cues, targets, iterations):
+        &#34;&#34;&#34;
+        Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;. 
+        Generally, this method should be re-implemented for an RL environment using the basic API methods. 
+        This method can serve as a useful template for creating such methods.
+
+        Args:
+            cues (Python list of 2-D Numpy arrays): Partial patterns to be tested.
+            targets (Python list of 2-D Numpy arrays): Original patterns to be compared.
+            iterations (int): Number of tests to perform on each pattern.
+
+        Returns:
+            Numpy array: The average reward for the step.
+        &#34;&#34;&#34;
+
+        rewards = np.zeros((iterations, len(cues)))
+
+        for i in range(iterations):
+            for j, cue in enumerate(cues):
+                response, success = self.TestPattern(cue, targets[j])
+                distance = json.loads(response.text)[&#34;Distance&#34;] # extract the distance from the response
+                reward = np.size(cue) - distance # max reward is size of the pattern (when distance = 0) -- could normalize
+                rewards[i][j] = reward
+
+        return np.mean(rewards)
+
+# -------------------------------------------------------------------------------- #
+# A variety of sample API interactions that demonstrate simple functionality
+# -------------------------------------------------------------------------------- #
+
+TEST_TESTITEM = False
+TEST_STEP = False
+TEST_STARTTRAINING = False
+TEST_UTP = False
+
+if TEST_STARTTRAINING:
+    tst_hipapi = HipAPI()
+    response, success = tst_hipapi.StartTraining(maxruns = 1, maxepcs = 50)
+    print(&#34;Test Start Training\n&#34;, response.text)
+
+if TEST_TESTITEM:
+    tti_hipapi = HipAPI()
+    # testAB&#39;s ab_0 pattern
+    bitstring = &#39;0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0&#39;
+    bitlist = bitstring.split(&#34;,&#34;) # convert to list
+    bitlist = [int(x) for x in bitlist] # convert to ints
+    arr = np.asarray(bitlist, dtype=&#34;int&#34;) # convert to numpy array
+    arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
+
+    response, success = tti_hipapi.TestPattern(arr, arr)
+    print(&#34;Test Item\n&#34;, response.text)
+
+if TEST_STEP:
+    ts_hipapi = HipAPI()
+    # testAB&#39;s ab_0 pattern
+    bitstring = &#39;0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0&#39;
+    bitlist = bitstring.split(&#34;,&#34;) # convert to list
+    bitlist = [int(x) for x in bitlist] # convert to ints
+    arr = np.asarray(bitlist, dtype=&#34;int&#34;) # convert to numpy array
+    arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
+
+    reward = ts_hipapi.Step([arr], [arr], 5)
+    print(&#34;Test Step\n&#34;, reward)
+
+if TEST_UTP:
+    utp_hipapi = HipAPI()
+    # testAB&#39;s ab_0 pattern
+    bitstring = &#39;0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,1,0,1,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0&#39;
+    bitlist = bitstring.split(&#34;,&#34;) # convert to list
+    bitlist = [int(x) for x in bitlist] # convert to ints
+    arr = np.asarray(bitlist, dtype=&#34;int&#34;) # convert to numpy array
+    arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
+
+    response, success = utp_hipapi.UpdateTrainingDataPatterns([arr, arr, arr, arr, arr, arr])
+    print(&#34;Test UTP\n&#34;, response.request.body)</code></pre>
+</details>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+</section>
+<section>
+<h2 class="section-title" id="header-classes">Classes</h2>
+<dl>
+<dt id="api.HipAPI"><code class="flex name class">
+<span>class <span class="ident">HipAPI</span></span>
+</code></dt>
+<dd>
+<div class="desc"></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">class HipAPI:
+
+    def __init__(self):
+        # configure the module logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.info(&#34;Initializing API&#34;)
+
+    def MakeURLString(self, api_endpoint):
+        &#34;&#34;&#34;
+        Makes the full request URL for an API request from an endpoint URL.
+
+        Args:
+            api_endpoint (string): The path for the endpoint, starting with &#39;/&#39;
+
+        Returns:
+            string: The full request URL for the API endpoint.
+        &#34;&#34;&#34;
+
+        return SERVER_URL + &#34;:&#34; + PORT + api_endpoint
+
+    def MakeRequest(self, verb, url, data):
+        &#34;&#34;&#34;
+        Send an HTTP request using the provided parameters and format response into desired tuple. 
+
+        Args:
+           verb (string): The HTTP verb to use (e.g., GET, POST, PUT)
+           url (string): The full URL to send the HTTP request to, including the REST endpoint
+           data (dict): The data to send in the body of the request as JSON.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+        &#34;&#34;&#34;
+
+        response = requests.request(verb, url=url, data=data)
+
+        return response, response.ok
+
+    def UpdateTrainingDataFile(self, filename):
+        &#34;&#34;&#34;
+        Update the model&#39;s training data.
+
+        Args:
+            filename (string): Full path to the Emergent-formatted CSV file containing the training patterns. Must have both Input and ECout patterns.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+        &#34;&#34;&#34;
+
+        api_endpoint = &#34;/dataset/train/update&#34;
+        data = {&#34;source&#34;:&#34;file&#34;, &#34;filename&#34;:filename}
+
+        return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)
+
+    def UpdateTrainingDataPatterns(self, patterns):
+        &#34;&#34;&#34;
+        Update training data to the patterns provided.
+
+        Args:
+            patterns (list of 4-D Numpy arrays): The patterns to train the model on.
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+        &#34;&#34;&#34;
+
+        api_endpoint = &#34;/dataset/train/update&#34;
+
+        # Format the list of numpy arrays into a format parseable by the backend
+        # Without replacing square brackets with parantheses, the JSON parser sometimes
+        #   parses each subarray to an individual array, instead of leaving it as the
+        #   representation of an n-d array
+        jsonpats = [json.dumps(np.ndarray.tolist(p)) for p in patterns]
+        jsonpats = [p.replace(&#39;[&#39;, &#39;(&#39;) for p in jsonpats]
+        jsonpats = [p.replace(&#39;]&#39;, &#39;)&#39;) for p in jsonpats]
+
+        data = {&#34;source&#34;:&#34;body&#34;, &#34;patterns&#34;:jsonpats, &#34;shape&#34;: json.dumps(patterns[0].shape)}
+
+        return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)
+
+    def TestPattern(self, corruptedPattern, targetPattern):
+        &#34;&#34;&#34;
+        Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.
+
+        Args:
+            corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
+            targetPattern (4-D Numpy integer array): Complete original pattern with no data removed. 
+
+        Returns: 
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+            1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
+            2) The Hamming distance between the recalled pattern and the target pattern.
+        &#34;&#34;&#34;
+
+        api_endpoint = &#34;/model/testpattern&#34;
+
+        assert corruptedPattern.shape == targetPattern.shape
+
+        d = {&#39;shape&#39;: json.dumps(corruptedPattern.shape), &#39;corruptedPattern&#39;: json.dumps(np.ndarray.tolist(corruptedPattern)), &#39;targetPattern&#39;:json.dumps(np.ndarray.tolist(targetPattern))}
+
+        return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), d)
+
+    def StartTraining(self, maxruns = 1, maxepcs = 50):
+        &#34;&#34;&#34;
+        Starts model training from scratch. This method will wait until the training is complete, so it could take some time.
+
+        Args:
+            maxruns (int): Number of model runs to perform (independent times to retrain)
+            maxecps (int): Number of epochs per run (epoch: train/test cycle with each item in test set)
+
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+            1) A string with information about the training time and parameters
+        &#34;&#34;&#34;
+        self.logger.debug(&#34;Starting training with parameters maxruns: %i, maxepcs: %i&#34;, maxruns, maxepcs)
+
+        # configure parameters dict
+        parameters = {}
+        parameters[&#34;maxruns&#34;] = maxruns
+        parameters[&#34;maxepcs&#34;] = maxepcs
+
+        api_endpoint = &#34;/model/train&#34;
+
+        return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), parameters)
+
+    def Step(self, cues, targets, iterations):
+        &#34;&#34;&#34;
+        Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;. 
+        Generally, this method should be re-implemented for an RL environment using the basic API methods. 
+        This method can serve as a useful template for creating such methods.
+
+        Args:
+            cues (Python list of 2-D Numpy arrays): Partial patterns to be tested.
+            targets (Python list of 2-D Numpy arrays): Original patterns to be compared.
+            iterations (int): Number of tests to perform on each pattern.
+
+        Returns:
+            Numpy array: The average reward for the step.
+        &#34;&#34;&#34;
+
+        rewards = np.zeros((iterations, len(cues)))
+
+        for i in range(iterations):
+            for j, cue in enumerate(cues):
+                response, success = self.TestPattern(cue, targets[j])
+                distance = json.loads(response.text)[&#34;Distance&#34;] # extract the distance from the response
+                reward = np.size(cue) - distance # max reward is size of the pattern (when distance = 0) -- could normalize
+                rewards[i][j] = reward
+
+        return np.mean(rewards)</code></pre>
+</details>
+<h3>Methods</h3>
+<dl>
+<dt id="api.HipAPI.MakeRequest"><code class="name flex">
+<span>def <span class="ident">MakeRequest</span></span>(<span>self, verb, url, data)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Send an HTTP request using the provided parameters and format response into desired tuple. </p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>verb</code></strong> :&ensp;<code>string</code></dt>
+<dd>The HTTP verb to use (e.g., GET, POST, PUT)</dd>
+<dt><strong><code>url</code></strong> :&ensp;<code>string</code></dt>
+<dd>The full URL to send the HTTP request to, including the REST endpoint</dd>
+<dt><strong><code>data</code></strong> :&ensp;<code>dict</code></dt>
+<dd>The data to send in the body of the request as JSON.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>(requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def MakeRequest(self, verb, url, data):
+    &#34;&#34;&#34;
+    Send an HTTP request using the provided parameters and format response into desired tuple. 
+
+    Args:
+       verb (string): The HTTP verb to use (e.g., GET, POST, PUT)
+       url (string): The full URL to send the HTTP request to, including the REST endpoint
+       data (dict): The data to send in the body of the request as JSON.
+
+    Returns:
+        (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+    &#34;&#34;&#34;
+
+    response = requests.request(verb, url=url, data=data)
+
+    return response, response.ok</code></pre>
+</details>
+</dd>
+<dt id="api.HipAPI.MakeURLString"><code class="name flex">
+<span>def <span class="ident">MakeURLString</span></span>(<span>self, api_endpoint)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Makes the full request URL for an API request from an endpoint URL.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>api_endpoint</code></strong> :&ensp;<code>string</code></dt>
+<dd>The path for the endpoint, starting with '/'</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>string</code></dt>
+<dd>The full request URL for the API endpoint.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def MakeURLString(self, api_endpoint):
+    &#34;&#34;&#34;
+    Makes the full request URL for an API request from an endpoint URL.
+
+    Args:
+        api_endpoint (string): The path for the endpoint, starting with &#39;/&#39;
+
+    Returns:
+        string: The full request URL for the API endpoint.
+    &#34;&#34;&#34;
+
+    return SERVER_URL + &#34;:&#34; + PORT + api_endpoint</code></pre>
+</details>
+</dd>
+<dt id="api.HipAPI.StartTraining"><code class="name flex">
+<span>def <span class="ident">StartTraining</span></span>(<span>self, maxruns=1, maxepcs=50)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Starts model training from scratch. This method will wait until the training is complete, so it could take some time.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>maxruns</code></strong> :&ensp;<code>int</code></dt>
+<dd>Number of model runs to perform (independent times to retrain)</dd>
+<dt><strong><code>maxecps</code></strong> :&ensp;<code>int</code></dt>
+<dd>Number of epochs per run (epoch: train/test cycle with each item in test set)</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt>(requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):</dt>
+<dt><code>1) A string with information about the training time and parameters</code></dt>
+<dd>&nbsp;</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def StartTraining(self, maxruns = 1, maxepcs = 50):
+    &#34;&#34;&#34;
+    Starts model training from scratch. This method will wait until the training is complete, so it could take some time.
+
+    Args:
+        maxruns (int): Number of model runs to perform (independent times to retrain)
+        maxecps (int): Number of epochs per run (epoch: train/test cycle with each item in test set)
+
+    Returns:
+        (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+        1) A string with information about the training time and parameters
+    &#34;&#34;&#34;
+    self.logger.debug(&#34;Starting training with parameters maxruns: %i, maxepcs: %i&#34;, maxruns, maxepcs)
+
+    # configure parameters dict
+    parameters = {}
+    parameters[&#34;maxruns&#34;] = maxruns
+    parameters[&#34;maxepcs&#34;] = maxepcs
+
+    api_endpoint = &#34;/model/train&#34;
+
+    return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), parameters)</code></pre>
+</details>
+</dd>
+<dt id="api.HipAPI.Step"><code class="name flex">
+<span>def <span class="ident">Step</span></span>(<span>self, cues, targets, iterations)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Steps the model forward one cycle. Similar to OpenAI gym's RL setup. Model must be trained prior to calling "step".
+Generally, this method should be re-implemented for an RL environment using the basic API methods.
+This method can serve as a useful template for creating such methods.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt>cues (Python list of 2-D Numpy arrays): Partial patterns to be tested.</dt>
+<dt>targets (Python list of 2-D Numpy arrays): Original patterns to be compared.</dt>
+<dt><strong><code>iterations</code></strong> :&ensp;<code>int</code></dt>
+<dd>Number of tests to perform on each pattern.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Numpy array</code></dt>
+<dd>The average reward for the step.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def Step(self, cues, targets, iterations):
+    &#34;&#34;&#34;
+    Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;. 
+    Generally, this method should be re-implemented for an RL environment using the basic API methods. 
+    This method can serve as a useful template for creating such methods.
+
+    Args:
+        cues (Python list of 2-D Numpy arrays): Partial patterns to be tested.
+        targets (Python list of 2-D Numpy arrays): Original patterns to be compared.
+        iterations (int): Number of tests to perform on each pattern.
+
+    Returns:
+        Numpy array: The average reward for the step.
+    &#34;&#34;&#34;
+
+    rewards = np.zeros((iterations, len(cues)))
+
+    for i in range(iterations):
+        for j, cue in enumerate(cues):
+            response, success = self.TestPattern(cue, targets[j])
+            distance = json.loads(response.text)[&#34;Distance&#34;] # extract the distance from the response
+            reward = np.size(cue) - distance # max reward is size of the pattern (when distance = 0) -- could normalize
+            rewards[i][j] = reward
+
+    return np.mean(rewards)</code></pre>
+</details>
+</dd>
+<dt id="api.HipAPI.TestPattern"><code class="name flex">
+<span>def <span class="ident">TestPattern</span></span>(<span>self, corruptedPattern, targetPattern)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt>corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.</dt>
+<dt>targetPattern (4-D Numpy integer array): Complete original pattern with no data removed.</dt>
+<dt><strong><code>Returns</code></strong></dt>
+<dd>(requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
+2) The Hamming distance between the recalled pattern and the target pattern.</dd>
+</dl></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def TestPattern(self, corruptedPattern, targetPattern):
+    &#34;&#34;&#34;
+    Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.
+
+    Args:
+        corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
+        targetPattern (4-D Numpy integer array): Complete original pattern with no data removed. 
+
+    Returns: 
+        (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
+        1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
+        2) The Hamming distance between the recalled pattern and the target pattern.
+    &#34;&#34;&#34;
+
+    api_endpoint = &#34;/model/testpattern&#34;
+
+    assert corruptedPattern.shape == targetPattern.shape
+
+    d = {&#39;shape&#39;: json.dumps(corruptedPattern.shape), &#39;corruptedPattern&#39;: json.dumps(np.ndarray.tolist(corruptedPattern)), &#39;targetPattern&#39;:json.dumps(np.ndarray.tolist(targetPattern))}
+
+    return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), d)</code></pre>
+</details>
+</dd>
+<dt id="api.HipAPI.UpdateTrainingDataFile"><code class="name flex">
+<span>def <span class="ident">UpdateTrainingDataFile</span></span>(<span>self, filename)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Update the model's training data.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>filename</code></strong> :&ensp;<code>string</code></dt>
+<dd>Full path to the Emergent-formatted CSV file containing the training patterns. Must have both Input and ECout patterns.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>(requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def UpdateTrainingDataFile(self, filename):
+    &#34;&#34;&#34;
+    Update the model&#39;s training data.
+
+    Args:
+        filename (string): Full path to the Emergent-formatted CSV file containing the training patterns. Must have both Input and ECout patterns.
+
+    Returns:
+        (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+    &#34;&#34;&#34;
+
+    api_endpoint = &#34;/dataset/train/update&#34;
+    data = {&#34;source&#34;:&#34;file&#34;, &#34;filename&#34;:filename}
+
+    return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)</code></pre>
+</details>
+</dd>
+<dt id="api.HipAPI.UpdateTrainingDataPatterns"><code class="name flex">
+<span>def <span class="ident">UpdateTrainingDataPatterns</span></span>(<span>self, patterns)</span>
+</code></dt>
+<dd>
+<div class="desc"><p>Update training data to the patterns provided.</p>
+<h2 id="args">Args</h2>
+<p>patterns (list of 4-D Numpy arrays): The patterns to train the model on.</p>
+<h2 id="returns">Returns</h2>
+<p>(requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.</p></div>
+<details class="source">
+<summary>
+<span>Expand source code</span>
+</summary>
+<pre><code class="python">def UpdateTrainingDataPatterns(self, patterns):
+    &#34;&#34;&#34;
+    Update training data to the patterns provided.
+
+    Args:
+        patterns (list of 4-D Numpy arrays): The patterns to train the model on.
+
+    Returns:
+        (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
+    &#34;&#34;&#34;
+
+    api_endpoint = &#34;/dataset/train/update&#34;
+
+    # Format the list of numpy arrays into a format parseable by the backend
+    # Without replacing square brackets with parantheses, the JSON parser sometimes
+    #   parses each subarray to an individual array, instead of leaving it as the
+    #   representation of an n-d array
+    jsonpats = [json.dumps(np.ndarray.tolist(p)) for p in patterns]
+    jsonpats = [p.replace(&#39;[&#39;, &#39;(&#39;) for p in jsonpats]
+    jsonpats = [p.replace(&#39;]&#39;, &#39;)&#39;) for p in jsonpats]
+
+    data = {&#34;source&#34;:&#34;body&#34;, &#34;patterns&#34;:jsonpats, &#34;shape&#34;: json.dumps(patterns[0].shape)}
+
+    return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)</code></pre>
+</details>
+</dd>
+</dl>
+</dd>
+</dl>
+</section>
+</article>
+<nav id="sidebar">
+<h1>Index</h1>
+<div class="toc">
+<ul></ul>
+</div>
+<ul id="index">
+<li><h3><a href="#header-classes">Classes</a></h3>
+<ul>
+<li>
+<h4><code><a title="api.HipAPI" href="#api.HipAPI">HipAPI</a></code></h4>
+<ul class="">
+<li><code><a title="api.HipAPI.MakeRequest" href="#api.HipAPI.MakeRequest">MakeRequest</a></code></li>
+<li><code><a title="api.HipAPI.MakeURLString" href="#api.HipAPI.MakeURLString">MakeURLString</a></code></li>
+<li><code><a title="api.HipAPI.StartTraining" href="#api.HipAPI.StartTraining">StartTraining</a></code></li>
+<li><code><a title="api.HipAPI.Step" href="#api.HipAPI.Step">Step</a></code></li>
+<li><code><a title="api.HipAPI.TestPattern" href="#api.HipAPI.TestPattern">TestPattern</a></code></li>
+<li><code><a title="api.HipAPI.UpdateTrainingDataFile" href="#api.HipAPI.UpdateTrainingDataFile">UpdateTrainingDataFile</a></code></li>
+<li><code><a title="api.HipAPI.UpdateTrainingDataPatterns" href="#api.HipAPI.UpdateTrainingDataPatterns">UpdateTrainingDataPatterns</a></code></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</main>
+<footer id="footer">
+<p>Generated by <a href="https://pdoc3.github.io/pdoc"><cite>pdoc</cite> 0.8.1</a>.</p>
+</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.12.0/highlight.min.js"></script>
+<script>hljs.initHighlightingOnLoad()</script>
+</body>
+</html>

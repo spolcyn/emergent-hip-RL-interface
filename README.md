@@ -22,7 +22,7 @@ To use the interface, one first starts the HTTP server, which runs the model and
 
 The default location of the server is `localhost` on port `1323`, as these are the default ports for the Go Echo server used by the model server. They can be changed by editing `server.go`, and the `api.py` file should be updated to match the new settings.
 
-# Setting Up the Model 
+# Setting Up the Model & Running the Experiment
 
 Requirements:
 - Go, version 1.13 or above
@@ -41,7 +41,8 @@ Getting Started:
     2. Use `./model.exe nogui` to launch the model without the GUI (generally faster and requires fewer resources) 
 
 4. Run the experiment: `python3 experiment.py` (takes ~6min on an i7-7820HQ, but could vary greatly depending on your processor)
-
+    - The results will be saved in `results.npy`, which the `plot.py` code will read in to graph.
+    - The results will also be displayed in the CLI as the average recall percentage across all patterns for each corruption ratio that was provided.
 5. Graph the results: `python3 plot.py`
 
 
