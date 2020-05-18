@@ -40,6 +40,7 @@ func InitModel() {
 	TheSim.New()
 	TheSim.Config()
 
+	// create the API server
 	server := HipServer{}
 	server.Init(":1323", &TheSim)
 
