@@ -1,3 +1,5 @@
+[Additional documentation available here.](https://spolcyn.github.io/emergent-hc-rl/)
+
 # Introduction
 
 This repository presents a Python and HTTP REST interface for reinforcement learning using the Emergent hippocampus model as an environment. 

@@ -27,4 +27,3 @@ ax.set_title("Effect of Pattern Count and Corruption Ratio\non Recall Accuracy (
         
 
 plt.show()
-

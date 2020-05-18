@@ -157,6 +157,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
 
     return results
 
+"""
 # setup logging
 logging.basicConfig()
 logger.info("Starting")
@@ -179,3 +180,4 @@ print("Results:", results)
 
 # save results for use with plot.py
 np.save("results", results)
+"""
