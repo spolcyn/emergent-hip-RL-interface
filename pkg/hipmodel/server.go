@@ -1,5 +1,6 @@
 // server.go
-// implements the REST API server for the hippocampus model
+// Author: Stephen Polcyn
+// Implements the REST API server for the hippocampus model
 
 package hipmodel
 
@@ -12,6 +13,7 @@ import (
 	"sync"
 )
 
+/* The hippocampus API server, managing an API server and a hippocampus model */
 type HipServer struct {
 	es  *echo.Echo // echo server
 	sim *Sim       // the hippocampus simulation
@@ -52,7 +54,7 @@ type TestRequest struct {
 
 type TrainRequest struct {
 	MaxRuns int `json:"maxruns" query:"maxruns" form:"maxruns"` // max runs to train for
-	MaxEpcs int `json:"maxepcs" query:"maxepcs" form:"maxepcs`  // max epochs to train for
+	MaxEpcs int `json:"maxepcs" query:"maxepcs" form:"maxepcs"` // max epochs to train for
 }
 
 /*** END API-Related Data Types ***/
@@ -71,10 +73,12 @@ func (hs *HipServer) setupRoutes() {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
 
+		// lock and update model
 		hs.mu.Lock()
 		err = hs.sim.RestUpdateTrainingData(update)
 		hs.mu.Unlock()
 
+		// send response
 		if err == nil {
 			return c.String(http.StatusOK, fmt.Sprintf("Training dataset updated from source: %v", update.Source))
 		} else {
@@ -93,12 +97,12 @@ func (hs *HipServer) setupRoutes() {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
 
-		// test the item
+		// lock and test the item
 		hs.mu.Lock()
 		nameError, err := hs.sim.RestTestPattern(tr)
 		hs.mu.Unlock()
 
-		// finish interaction
+		// send response
 		if err == nil {
 			jsonNE, err2 := json.Marshal(nameError)
 
@@ -122,13 +126,13 @@ func (hs *HipServer) setupRoutes() {
 			return c.String(http.StatusBadRequest, err.Error())
 		}
 
-		// start training
+		// lock and start training
 		hs.mu.Lock()
 		str, err := hs.sim.RestStartTraining(tr)
 		hs.mu.Unlock()
 
+		// send response
 		if err == nil {
-			// finish interaction
 			return c.String(http.StatusOK, str)
 		} else {
 			return c.String(http.StatusPreconditionFailed, err.Error())

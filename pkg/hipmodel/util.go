@@ -1,5 +1,6 @@
 // util.go
-// methods for manipulating datasets and error calculations
+// Author: Stephen Polcyn
+// Methods for manipulating datasets and error calculations
 
 package hipmodel
 
@@ -13,7 +14,8 @@ import (
 	"github.com/emer/etable/etensor"
 )
 
-// Debugging
+// Debugging - set to >0 to enable DPrintf statements
+// Approach taken from code provided by COS418 (f'19) at Princeton University
 const Debug = 0
 
 func DPrintf(format string, a ...interface{}) (n int, err error) {
@@ -35,7 +37,7 @@ func isin(m map[rune]struct{}, r rune) bool {
 // the standard dump format for a numpy array is
 func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float32) {
 
-	//DPrintf("shapeJSON: %v\n\npatternJSON: %v\n\n", shapeJSON, patternJSON)
+	DPrintf("shapeJSON: %v\n\npatternJSON: %v\n\n", shapeJSON, patternJSON)
 
 	// parse the shape of the tensor and create it
 	re := regexp.MustCompile(`\d+`)
@@ -48,8 +50,8 @@ func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float3
 		}
 	}
 
-	//DPrintf("shapestrings: %v\n", shapeStrings)
-	//DPrintf("shape: %v\n", shape)
+	DPrintf("shapestrings: %v\n", shapeStrings)
+	DPrintf("shape: %v\n", shape)
 	pattern = etensor.NewFloat32(shape, nil, nil)
 
 	// create an n-d coordinate tracking where we're inserting data
@@ -90,7 +92,7 @@ func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float3
 		}
 	}
 
-	//DPrintf("Pattern: %v\n", pattern)
+	DPrintf("Pattern: %v\n", pattern)
 
 	return pattern
 }

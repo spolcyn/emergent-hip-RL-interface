@@ -1,5 +1,6 @@
 // api.go
-// implements the methods interacting between the model and the server
+// Author: Stephen Polcyn
+// Implements the methods interacting between the model and the server
 
 package hipmodel
 
@@ -11,29 +12,31 @@ import (
 	"time"
 )
 
-// Update the data used for training/testing the model and re-init the network
+/* Update the data used for training/testing the model and re-init the network */
 func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 
-	//DPrintf("update: %v\n", update)
+	DPrintf("Update: %v\n", update)
 	var err error = nil
 
 	// update dataset from file
 	if update.Source == "file" {
 		DPrintf("updating training data with file: %v\n", update.Filename)
-		err = ss.OpenPatComma(ss.TrainAB, update.Filename, "Training Patterns", "Not really AB Training Patterns")
-		if err == nil {
+
+		err = ss.OpenPatComma(ss.TrainAB, update.Filename, "Training Patterns", "Training Patterns")
+		if err != nil {
 			return err
 		}
 		err = ss.OpenPatComma(ss.TestAB, update.Filename, "Testing Patterns", "Same as Training Patterns")
+
 	} else if update.Source == "body" {
-		//DPrintf("pattern len: %v\n", len(update.Patterns))
-		//DPrintf("body: \n\n%v\n", update.Patterns)
+		DPrintf("pattern len: %v\n", len(update.Patterns))
+		DPrintf("body: \n\n%v\n", update.Patterns)
 		DPrintf("updating training data with %v patterns\n", len(update.Patterns))
 
 		// parse patterns to array of etensors
 		pats := make([]*etensor.Float32, len(update.Patterns))
 		for i, jsonPat := range update.Patterns {
-			//DPrintf("parsing:\n\n%v\n\nwith shape: %v\n", v, update.Shape)
+			DPrintf("parsing:\n\n%v\n\nwith shape: %v\n", v, update.Shape)
 			pats[i] = ParseTensorFromJSON(update.Shape, jsonPat)
 		}
 
@@ -45,7 +48,7 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 		// get pattern shape and compute column shape
 		patShape := pats[0].Shape.Shp
 		colShape := append([]int{len(pats)}, patShape...)
-		//DPrintf("Patshape: %v || Colshape: %v", patShape, colShape)
+		DPrintf("Patshape: %v || Colshape: %v", patShape, colShape)
 
 		// setup columns for filling
 		rowNames := etensor.NewString([]int{len(pats)}, nil, []string{"row"})
@@ -53,31 +56,31 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 
 		// copy array of patterns into a single etensor column
 		for i, tsr := range pats {
-			//DPrintf("i: %v || tsr: \n%v\n", i, tsr)
+			DPrintf("i: %v || tsr: \n%v\n", i, tsr)
 			rowNames.Set1D(i, fmt.Sprintf("trn-%v", i))
 			col.SubSpace([]int{i}).CopyFrom(tsr)
 		}
 
-		//DPrintf("Column: \n\n%v\n\n", col)
+		DPrintf("Column: \n\n%v\n\n", col)
 
-		// add the patterns to the table
+		// add the pattern columns to the table
 		trainpats.AddCol(rowNames, "Name")
 		trainpats.AddCol(col, "Input")
 		trainpats.AddCol(col, "ECout")
 
 		// Set training etable in model
-		//DPrintf("\n\nTrainAB BEFORE\n\n%v\n", ss.TrainAB)
+		DPrintf("\n\nTrainAB BEFORE\n\n%v\n", ss.TrainAB)
 		ss.TrainAB = trainpats
 		ss.TestAB = trainpats
-		//DPrintf("\n\nTrainAB AFTER\n\n%v\n", ss.TrainAB)
+		DPrintf("\n\nTrainAB AFTER\n\n%v\n", ss.TrainAB)
 
 		// re-init model
 		ss.Init()
 
-		DPrintf("\n\nTrain Env AFTER: %v\n\n%v\n", ss.TrainEnv)
-		DPrintf("\n\nTest Env AFTER: %v\n\n%v\n", ss.TestEnv)
+		DPrintf("\n\nTrain Env AFTER: \n\n%v\n", ss.TrainEnv)
+		DPrintf("\n\nTest Env AFTER: \n\n%v\n", ss.TestEnv)
 
-		//DPrintf("parsed patterns:\n\n%v\n", pats)
+		DPrintf("parsed patterns:\n\n%v\n", pats)
 	} else {
 		return errors.New("Invalid update method")
 	}

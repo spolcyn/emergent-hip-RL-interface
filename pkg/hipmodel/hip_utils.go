@@ -1,10 +1,13 @@
+// hip_utils.go
+// Author: Stephen Polcyn
+// Utility methods for interacting with the hippocampus model
+
 package hipmodel
 
 import (
 	"math"
 	"strconv"
 
-	//	"github.com/emer/emergent/env"
 	"github.com/emer/emergent/patgen"
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etensor"
@@ -12,7 +15,7 @@ import (
 	"github.com/goki/gi/gi"
 )
 
-// SP: Test Slice Equality
+// Test Slice Equality
 func SlicesAreEqual(s1, s2 []int) bool {
 
 	if len(s1) != len(s2) {
@@ -28,7 +31,7 @@ func SlicesAreEqual(s1, s2 []int) bool {
 	return true
 }
 
-// SP: Finds the most similar vocabulary pattern to a provided activation set within a vocabulary
+// Finds the most similar vocabulary pattern to a provided activation set within a vocabulary
 func FindMostSimilarVocabPattern(pattern *etensor.Float32, vocab patgen.Vocab) *etensor.Float32 {
 
 	distance := math.MaxInt32
@@ -48,18 +51,19 @@ func FindMostSimilarVocabPattern(pattern *etensor.Float32, vocab patgen.Vocab) *
 
 }
 
+// Struct to store relevant parts of the name error
 type NameError struct {
 	Distance       int
 	ClosestPattern *etensor.Float32
 }
 
-// SP: Given a candidate and a reference, outputs a distance score between them
+// Given a candidate and a reference, outputs a distance score between them
 // Currently uses Hamming Distance
 // Tensors are float-types, so can't easily use XOR as one could on a bit array
 // On our size tensors, shouldn't matter -- if tensors get too big, also easily parallelizable
 func CalculateDistance(t1, t2 *etensor.Float32) int {
 
-	// TODO: Throw an error instead
+	// would be better to throw an error here
 	if !SlicesAreEqual(t1.ShapeObj().Shp, t2.ShapeObj().Shp) {
 		panic("tensors don't have the same shape!")
 	}
@@ -75,7 +79,7 @@ func CalculateDistance(t1, t2 *etensor.Float32) int {
 	return distance
 }
 
-// SP: Calculates which vocabulary pattern the ECOut is most similar to,
+// Calculates which vocabulary pattern the ECOut is most similar to,
 // then compares that pattern to the ECIn to see if it is correct or not
 // We return the distance between the patterns for downstream functions
 // to make decisions about what it means
@@ -83,9 +87,9 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 
 	// get activations
 	outPattern := etensor.NewFloat32(ecout.Shape().Shp, nil, nil)
-	ecout.UnitValsTensor(outPattern, "ActM") // get minus-phase activity
+	ecout.UnitValsTensor(outPattern, "ActM") // get minus-phase activation
 
-	//DPrintf("Outpattern:\n\n%v", outPattern)
+	DPrintf("Outpattern:\n\n%v", outPattern)
 
 	distance := math.MaxInt32
 	var mostSimilar *etensor.Float32
@@ -102,15 +106,14 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 		}
 	}
 
-	//DPrintf("Distance: %v | ClosestPattern: %v", distance, mostSimilar)
+	DPrintf("Distance: %v | ClosestPattern: %v", distance, mostSimilar)
 
 	// set the error pattern
 	ss.NameErrorResult = &NameError{Distance: distance, ClosestPattern: mostSimilar.Clone().(*etensor.Float32)}
 }
 
-// updates the testenv with a pattern so that the index 0 of the testenv will return the test pattern
-// for use with testing a very specific, arbitrary pattern that can't be pre-loaded in a dataset
-// because we have no idea what the cortex model is going to send at us
+// Updates the testenv with a pattern so that the index 0 of the testenv will return the test pattern
+// for use with testing a very specific, arbitrary pattern
 func (ss *Sim) UpdateTestEnvWithTestPatterns(corrPattern, targPattern *etensor.Float32) {
 
 	DPrintf("Test Tensor: \n%v\nTarget: \n%v\n", corrPattern, targPattern)
@@ -142,61 +145,4 @@ func (ss *Sim) UpdateTestEnvWithTestPatterns(corrPattern, targPattern *etensor.F
 	ss.ConfigEnv()
 
 	DPrintf("Test Env: \n%v\n\n", ss.TestEnv)
-}
-
-func SaveVocabToCSV(filename string, vocab patgen.Vocab) {
-
-	/* save to CSV */
-	table := etable.NewTable(filename)
-
-	numUnits := 1
-	table.AddRows(numUnits)
-
-	for k, v := range vocab {
-		table.AddCol(v, k)
-	}
-
-	table.SaveCSV(gi.FileName(filename), etable.Comma, true)
-}
-
-// loads a pre-created vocab from vocabFilename, creating the vocab if it doesn't exist
-// the dataset is always re-created to avoid having to create a scheme to verify whether a dataset matches a given vocab
-func LoadDataset(vocabFilename string) *etable.Table {
-
-	dataset := etable.NewTable("TrainAB")
-
-	CreateDataset(dataset)
-	dataset.SaveCSV(gi.FileName("dataset.csv"), etable.Comma, true)
-
-	return dataset
-}
-
-/* create a dataset in the provided table from the provided vocab */
-func CreateDataset(dt *etable.Table) {
-
-	npats := 20
-	ySize := 6
-	xSize := 2
-	poolY := 3
-	poolX := 4
-
-	// creates the etable of the approrpiate size
-	// Tensor Format: <ySize, xSize, poolY, poolX>
-	patgen.InitPats(dt, "TrainAB-Me", "Vocab Generated Patterns", "Input", "ECout", npats, ySize, xSize, poolY, poolX)
-
-	// configure vocab parameters
-	vocab := patgen.Vocab{}
-	var pctAct float32 = .25 // this might be too high -- .2 in hip_bench, .25 in OG train_ab.tsv
-	var minDiff float32 = .4
-	vocabNames := make([]string, ySize*xSize)
-
-	// create the vocab items
-	for i := 0; i < ySize*xSize; i++ {
-		vocabNames[i] = strconv.Itoa(i)
-		patgen.AddVocabPermutedBinary(vocab, vocabNames[i], npats, poolY, poolX, pctAct, minDiff)
-	}
-
-	// mix input and output patterns into training dataset
-	patgen.MixPats(dt, vocab, "Input", vocabNames)
-	patgen.MixPats(dt, vocab, "ECout", vocabNames)
 }
