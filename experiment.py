@@ -25,6 +25,7 @@ def CorruptPattern(pattern, ratio):
         Numpy array: A copy of the original pattern, corrupted the prescribed amount.
     """
 
+
     # calc number of units
     shape = list(pattern.shape)
     assert len(shape) == 4 # ensure its a 4-d array
@@ -32,20 +33,23 @@ def CorruptPattern(pattern, ratio):
 
     corrupted = pattern.copy() # copy to avoid modifying source
 
-    neuronsToCorrupt = np.sum(corrupted) * ratio
+    neuronsToCorrupt = int(np.sum(corrupted) * ratio)
     corruptedNeurons = 0
+
+    logger.debug("Corrupting pattern with ratio %f, total neurons to corrupt: %i", ratio, neuronsToCorrupt)
 
     # iterate through the pattern, switching the first neuronsToCorrupt
     # active neurons to inactive
     for x in np.nditer(corrupted, op_flags = ['readwrite']):
+        logger.debug("Corrupted Neurons: %i, Neurons To Corrupt Total: %i", corruptedNeurons, neuronsToCorrupt)
+
+        if (corruptedNeurons == neuronsToCorrupt):
+            break
+
+        # if not complete, try to corrupt one
         if x[...] == 1:
             x[...] = 0
             corruptedNeurons += 1
-
-        logger.debug("Corrupted Neurons: %i, Neurons To Corrupt Total: %i", corruptedNeurons, neuronsToCorrupt)
-
-        if corruptedNeurons == neuronsToCorrupt:
-            break
 
     return corrupted
 
@@ -58,6 +62,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
         minPatterns (int): Minimum number of patterns to train on at once.
         step (int): Number of patterns to increase by for each new trial.
         trials (int): Number of times to test each item per condition (results averaged over trials for each item to give total per performance in given condition).
+        trainingEpochs (int): Number of epochs to train the model for when training on each dataset.
         corruptionRatios (Numpy array of floats): Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].
         sparsity (float): Percentage of neurons as a decimal that should be inactive in the generated patterns.
 
@@ -153,19 +158,19 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     return results
 
 # setup logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig()
 logger.info("Starting")
 
 # setup parameters
 minPatterns = 2
-maxPatterns = 20 
+maxPatterns = 20
 step = 2
 corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
 sparsity = .75
 
 # time and run experiment
 start = time.monotonic()
-results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trials = 10, trainingEpochs=1, corruptionRatios=corruptionRatios, sparsity = .75)
+results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trainingEpochs=5, corruptionRatios=corruptionRatios, sparsity = .75)
 end = time.monotonic()
 
 # report results

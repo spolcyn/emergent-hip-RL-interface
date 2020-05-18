@@ -23,7 +23,7 @@ ax.set_xticklabels(x_labels, fontsize=12)
 
 ax.set_ylabel("Number of Patterns", fontsize=18)
 ax.set_xlabel("Corruption Ratio", fontsize=18)
-ax.set_title("Effect of Pattern Count and Corruption Ratio\non Recall Accuracy (1 Training Epoch)", fontsize=20)
+ax.set_title("Effect of Pattern Count and Corruption Ratio\non Recall Accuracy (5 Training Epochs)", fontsize=20)
         
 
 plt.show()
