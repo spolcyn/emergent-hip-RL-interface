@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Modifictions Copyright (c) 2020, Stephen Polcyn. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // hip runs a hippocampus model on the AB-AC paired associate learning task
 package hipmodel
 

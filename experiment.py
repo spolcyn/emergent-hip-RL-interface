@@ -1,5 +1,8 @@
+# Copyright (c) 2020, Stephen Polcyn. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
 # experiment.py
-# Author: Stephen Polcyn
 # Runs an experiment using the Emergent hippocampus Python API
 
 import numpy as np

@@ -1,5 +1,8 @@
+# Copyright (c) 2020, Stephen Polcyn. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
 # api.py
-# Author: Stephen Polcyn
 # Provides the Python API for interacting with the hippocampus model
 
 import requests
