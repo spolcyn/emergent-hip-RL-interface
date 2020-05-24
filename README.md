@@ -58,6 +58,82 @@ Getting Started:
 
 **Figure 2:** Sample experimental results showing recall drop-off as number of patterns and corruption ratio increase.
 
+# Updating the `hip.go` File
+
+Periodically, updates to the `hip.go` may come from the upstream Emergent
+repository. Because of the design of the interface, most changes to the `hip.go`
+code are relatively easy to apply (barring any serious changes in the underlying
+variables and functions of the `hip.go` code). Below documents the changes that must be made to a new `hip.go` in order to support the interface:
+
+1. Change the package from `main` to `hipmodel`.
+2. Change the name of the `main()` function to `InitModel()`.
+3. Add the following three lines to `InitModel()`, after `TheSim.New()` and `TheSim.Config()`:
+```
+// create the API server
+server := HipServer{}
+server.Init(":1323", &TheSim)
+```
+4. Add the following two lines to `type Sim struct {`:
+```
+// HIP RL Interface
+NameErrorResult *NameError
+``` 
+5. Comment out (or delete) the code that starts training on the AC dataset to avoid unnecessary computation. 
+These lines are in `TrainTrial()`, and the exact code may vary. Currently, it looks like this:
+```
+/*
+    if ss.TrainEnv.Table.Table == ss.TrainAB && (learned || epc == ss.MaxEpcs/2) {
+        ss.TrainEnv.Table = etable.NewIdxView(ss.TrainAC)
+        learned = false
+    }
+*/
+```
+6. Comment out (or delete) the code that starts testing on the AC dataset to
+   avoid unnecessary computation. Since the interface doesn't use the `TestAll()`
+functionality, this should not be a concern. The current first and last few
+lines are listed below; see this repository's `hip.go` for the full text:
+```
+/*
+if !ss.StopNow {
+    ss.TestNm = "AC"
+    ss.TestEnv.Table = etable.NewIdxView(ss.TestAC)
+...
+...
+        for {
+            ss.TestTrial(true)
+            _, _, chg := ss.TestEnv.Counter(env.Epoch)
+            if chg || ss.StopNow {
+                break
+            }
+        }
+    }
+}
+*/
+```
+7. Comment out (or delete) the entire body of the `OpenPats()` method. Do not
+   delete the method itself, as that will cause errors when the `Config()` function
+tries to call it. Also, you may modify the code in that method to load the
+files directly during model launch instead of using the API to instruct the model
+to load the patterns from a file.
+8. Comment out (or delete) the last part of the `CmdArgs()` method that
+   configures the Epc and Run log and starts training, as we don't want to the
+model to train without our express command, and we also don't use the Epc/Run log. 
+The current first and last few lines are listed below; see this repository's
+`hip.go` for the full text:
+``` 
+/*
+if saveEpcLog {
+    var err error
+    fnm := ss.LogFileName("epc")
+...
+...
+if ss.SaveWts {
+    fmt.Printf("Saving final weights per run\n")
+}
+ss.Train()
+*/
+```
+
 # Contributing
 
 If something doesn't work the way you expected to or you have ideas for future improvements, please [open an issue](https://github.com/spolcyn/emergent-hippocampus-RL/issues) or submit a pull request.

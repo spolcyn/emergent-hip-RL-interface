@@ -242,8 +242,7 @@ type Sim struct {
 	NeedsNewRun  bool             `view:"-" desc:"flag to initialize NewRun if last one finished"`
 	RndSeed      int64            `view:"-" desc:"the current random seed"`
 
-	// SP
-	InputPatterns   *etable.Table
+	// HIP RL Interface: Stores the custom error data for later reading by the HTTP API
 	NameErrorResult *NameError
 }
 
@@ -281,9 +280,6 @@ func (ss *Sim) New() {
 	ss.LayStatNms = []string{"ECin", "DG", "CA3", "CA1"}
 	ss.TstNms = []string{"AB", "AC", "Lure"}
 	ss.TstStatNms = []string{"Mem", "TrgOnWasOff", "TrgOffWasOn"}
-
-	// SP
-	ss.InputPatterns = &etable.Table{}
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -307,7 +303,7 @@ func (ss *Sim) ConfigEnv() {
 		ss.MaxRuns = 10
 	}
 	if ss.MaxEpcs == 0 { // allow user override
-		ss.MaxEpcs = 50
+		ss.MaxEpcs = 20
 		ss.NZeroStop = 1
 	}
 
@@ -529,7 +525,6 @@ func (ss *Sim) AlphaCyc(train bool) {
 		}
 		ss.Net.QuarterFinal(&ss.Time)
 		if qtr+1 == 3 {
-			// SP: Fairly sure this is where name error is computed
 			ss.MemStats(train) // must come after QuarterFinal
 		}
 		ss.Time.QuarterInc()
@@ -594,12 +589,13 @@ func (ss *Sim) TrainTrial() {
 			ss.TestAll()
 		}
 		learned := (ss.NZeroStop > 0 && ss.NZero >= ss.NZeroStop)
-		// SP: This looks like the switch to training AC
+		// HIP RL Interface: Prevents unnecessary computation for the AC
 		/*
 			if ss.TrainEnv.Table.Table == ss.TrainAB && (learned || epc == ss.MaxEpcs/2) {
 				ss.TrainEnv.Table = etable.NewIdxView(ss.TrainAC)
 				learned = false
-			}*/
+			}
+		*/
 		if learned || epc >= ss.MaxEpcs { // done with training..
 			ss.RunEnd()
 			if ss.TrainEnv.Run.Incr() { // we are done!
@@ -675,7 +671,7 @@ func (ss *Sim) MemStats(train bool) {
 	ecout := ss.Net.LayerByName("ECout").(leabra.LeabraLayer).AsLeabra()
 	ecin := ss.Net.LayerByName("ECin").(leabra.LeabraLayer).AsLeabra()
 
-	// SP: Test
+	// HIP RL Interface: Calculates error using a custom metric and stores it in the Sim struct for later retrieval by the HTTP server
 	if !train {
 		ss.CalculateError(ecin, ecout)
 	}
@@ -719,35 +715,18 @@ func (ss *Sim) MemStats(train bool) {
 		} else {
 			ss.Mem = 0
 		}
-	} else { // test // SP: This looks like name error test computation
-		//if cmpN > 0 { // should be -- SP: But might not, if we use train patterns as test patterns
-		// SP Mod: still execute the mem-setting portion and the division
-		if cmpN <= 0 {
-			trgOnWasOffCmp = 0
-		} else {
-			//DPrintf("Target On Was Off Cmp: %v; cmpN: %v", trgOnWasOffCmp, cmpN)
-			trgOnWasOffCmp /= cmpN
+	} else { // test
+		if cmpN > 0 { // should be
+			if trgOnWasOffCmp < ss.MemThr && trgOffWasOn < ss.MemThr {
+				ss.Mem = 1
+			} else {
+				ss.Mem = 0
+			}
 		}
-		if trgOnWasOffCmp < ss.MemThr && trgOffWasOn < ss.MemThr {
-			ss.Mem = 1
-		} else {
-			ss.Mem = 0
-		}
-		//}
 	}
 	ss.TrgOnWasOffAll = trgOnWasOffAll
 	ss.TrgOnWasOffCmp = trgOnWasOffCmp
 	ss.TrgOffWasOn = trgOffWasOn
-
-	/*
-		// SP: Set ss.Mem according to *our* calculateError metric
-		if errorResult == 0 {
-			fmt.Println("No error")
-			ss.Mem = 1
-		} else {
-			ss.Mem = 0
-		}
-	*/
 }
 
 // TrialStats computes the trial-level statistics and adds them to the epoch accumulators if
@@ -880,7 +859,7 @@ func (ss *Sim) TestAll() {
 			break
 		}
 	}
-	/* SP: This looks like the AC test
+	/* HIP RL Interface: Don't waste computation time running tests for AC, which we don't use
 	if !ss.StopNow {
 		ss.TestNm = "AC"
 		ss.TestEnv.Table = etable.NewIdxView(ss.TestAC)
@@ -904,7 +883,8 @@ func (ss *Sim) TestAll() {
 				}
 			}
 		}
-	}*/
+	}
+	*/
 	// log only at very end
 	ss.LogTstEpc(ss.TstEpcLog)
 }
@@ -980,18 +960,6 @@ func (ss *Sim) OpenPat(dt *etable.Table, fname, name, desc string) {
 	dt.SetMetaData("desc", desc)
 }
 
-// SP: Open an actual CSV file
-func (ss *Sim) OpenPatComma(dt *etable.Table, fname, name, desc string) error {
-	err := dt.OpenCSV(gi.FileName(fname), etable.Comma)
-	if err != nil {
-		return err
-	}
-	dt.SetMetaData("name", name)
-	dt.SetMetaData("desc", desc)
-
-	return nil
-}
-
 // not using this is the only diff from sims version:
 // // OpenPatAsset opens pattern file from embedded assets
 // func (ss *Sim) OpenPatAsset(dt *etable.Table, fnm, name, desc string) error {
@@ -1020,16 +988,15 @@ func (ss *Sim) OpenPats() {
 	// patgen.ReshapeCppFile(ss.TestAB, "Test_AB.dat", "TestAB.dat")
 	// patgen.ReshapeCppFile(ss.TestAC, "Test_AC.dat", "TestAC.dat")
 	// patgen.ReshapeCppFile(ss.TestLure, "Lure.dat", "TestLure.dat")
+	/* HIP RL Interface: We don't load any patterns in at startup, all patterns should come form the API.
 	ss.OpenPat(ss.TrainAB, "datasets/original/train_ab.tsv", "TrainAB", "AB Training Patterns")
-	//ss.OpenPatComma(ss.TrainAB, "dataset.csv", "TrainAB", "AB Training Patterns")
-
 	ss.OpenPat(ss.TestAB, "datasets/original/test_ab.tsv", "TestAB", "AB Testing Patterns")
-	//	ss.OpenPatComma(ss.TestAB, "nocontext data sets/test_nocontext-sparse-column-samedata.csv", "TestAB", "AB Testing Patterns")
 
 	ss.OpenPat(ss.TrainAC, "datasets/original/train_ac.tsv", "TrainAC", "AC Training Patterns")
 	ss.OpenPat(ss.TestAC, "datasets/original/test_ac.tsv", "TestAC", "AC Testing Patterns")
 
 	ss.OpenPat(ss.TestLure, "datasets/original/test_lure.tsv", "TestLure", "Lure Testing Patterns")
+	*/
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -1916,6 +1883,7 @@ func (ss *Sim) CmdArgs() {
 		fmt.Printf("Using ParamSet: %s\n", ss.ParamSet)
 	}
 
+	/* HIP RL Interface: We don't use this functionality, and don't want the model to start training on startup.
 	if saveEpcLog {
 		var err error
 		fnm := ss.LogFileName("epc")
@@ -1943,6 +1911,6 @@ func (ss *Sim) CmdArgs() {
 	if ss.SaveWts {
 		fmt.Printf("Saving final weights per run\n")
 	}
-	//fmt.Printf("Running %d Runs\n", ss.MaxRuns)
-	//ss.Train()
+	ss.Train()
+	*/
 }

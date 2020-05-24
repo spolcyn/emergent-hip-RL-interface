@@ -14,6 +14,8 @@ import (
 	"github.com/emer/etable/etable"
 	"github.com/emer/etable/etensor"
 	"github.com/emer/leabra/leabra"
+
+	"github.com/goki/gi/gi"
 )
 
 // Test Slice Equality
@@ -30,6 +32,18 @@ func SlicesAreEqual(s1, s2 []int) bool {
 	}
 
 	return true
+}
+
+// Opens a pattern that is stored in a CSV file using the Comma separator
+func (ss *Sim) OpenPatComma(dt *etable.Table, fname, name, desc string) error {
+	err := dt.OpenCSV(gi.FileName(fname), etable.Comma)
+	if err != nil {
+		return err
+	}
+	dt.SetMetaData("name", name)
+	dt.SetMetaData("desc", desc)
+
+	return nil
 }
 
 // Finds the most similar vocabulary pattern to a provided activation set within a vocabulary
