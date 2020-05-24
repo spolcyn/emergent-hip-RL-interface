@@ -82,17 +82,24 @@ var ParamSets = params.Sets{
 					"Prjn.Learn.Lrate":        "0.04",
 					"Prjn.Learn.Momentum.On":  "false",
 					"Prjn.Learn.Norm.On":      "false",
-					"Prjn.Learn.WtBal.On":     "false",
-					"Prjn.Learn.XCal.SetLLrn": "true", // bcm is now active -- control
-					"Prjn.Learn.XCal.LLrn":    "0",    // 0 = turn off BCM
+					"Prjn.Learn.WtBal.On":     "true",
+					"Prjn.Learn.XCal.SetLLrn": "false", // using bcm now, better
 				}},
 			{Sel: ".HippoCHL", Desc: "hippo CHL projections -- no norm, moment, but YES wtbal = sig better",
 				Params: params.Params{
 					"Prjn.CHL.Hebb":          "0.05",
-					"Prjn.Learn.Lrate":       "0.4", // note: 0.2 can sometimes take a really long time to learn
+					"Prjn.Learn.Lrate":       "0.2",
 					"Prjn.Learn.Momentum.On": "false",
 					"Prjn.Learn.Norm.On":     "false",
 					"Prjn.Learn.WtBal.On":    "true",
+				}},
+			{Sel: ".PPath", Desc: "perforant path, new Dg error-driven EcCa1Prjn prjns",
+				Params: params.Params{
+					"Prjn.Learn.Momentum.On": "false",
+					"Prjn.Learn.Norm.On":     "false",
+					"Prjn.Learn.WtBal.On":    "true",
+					"Prjn.Learn.Lrate":       "0.15", // err driven: .15 > .2 > .25 > .1
+					// moss=4, delta=4, lr=0.2, test = 3 are best
 				}},
 			{Sel: "#CA1ToECout", Desc: "extra strong from CA1 to ECout",
 				Params: params.Params{
@@ -113,24 +120,35 @@ var ParamSets = params.Sets{
 				}},
 			{Sel: "#DGToCA3", Desc: "Mossy fibers: strong, non-learning",
 				Params: params.Params{
-					"Prjn.CHL.Hebb":    "0.001",
-					"Prjn.CHL.SAvgCor": "1",
 					"Prjn.Learn.Learn": "false",
 					"Prjn.WtInit.Mean": "0.9",
 					"Prjn.WtInit.Var":  "0.01",
-					"Prjn.WtScale.Rel": "8",
+					"Prjn.WtScale.Rel": "4",
 				}},
 			{Sel: "#CA3ToCA3", Desc: "CA3 recurrent cons",
 				Params: params.Params{
-					"Prjn.CHL.Hebb":    "0.01",
-					"Prjn.CHL.SAvgCor": "1",
-					"Prjn.WtScale.Rel": "2",
+					"Prjn.WtScale.Rel": "0.1",
+					"Prjn.Learn.Lrate": "0.1",
+				}},
+			{Sel: "#ECinToDG", Desc: "DG learning is surprisingly critical: maxed out fast, hebbian works best",
+				Params: params.Params{
+					"Prjn.Learn.Learn":       "true", // absolutely essential to have on!
+					"Prjn.CHL.Hebb":          ".5",   // .5 > 1 overall
+					"Prjn.CHL.SAvgCor":       "0.1",  // .1 > .2 > .3 > .4 ?
+					"Prjn.CHL.MinusQ1":       "true", // dg self err?
+					"Prjn.Learn.Lrate":       "0.4",  // .4 > .3 > .2
+					"Prjn.Learn.Momentum.On": "false",
+					"Prjn.Learn.Norm.On":     "false",
+					"Prjn.Learn.WtBal.On":    "true",
 				}},
 			{Sel: "#CA3ToCA1", Desc: "Schaffer collaterals -- slower, less hebb",
 				Params: params.Params{
-					"Prjn.CHL.Hebb":    "0.005",
-					"Prjn.CHL.SAvgCor": "0.4",
-					"Prjn.Learn.Lrate": "0.1",
+					"Prjn.CHL.Hebb":          "0.01",
+					"Prjn.CHL.SAvgCor":       "0.4",
+					"Prjn.Learn.Lrate":       "0.1",
+					"Prjn.Learn.Momentum.On": "false",
+					"Prjn.Learn.Norm.On":     "false",
+					"Prjn.Learn.WtBal.On":    "true",
 				}},
 			{Sel: ".EC", Desc: "all EC layers: only pools, no layer-level",
 				Params: params.Params{
@@ -143,7 +161,7 @@ var ParamSets = params.Sets{
 			{Sel: "#DG", Desc: "very sparse = high inibhition",
 				Params: params.Params{
 					"Layer.Inhib.ActAvg.Init": "0.01",
-					"Layer.Inhib.Layer.Gi":    "3.6",
+					"Layer.Inhib.Layer.Gi":    "3.8",
 				}},
 			{Sel: "#CA3", Desc: "sparse = high inibhition",
 				Params: params.Params{
@@ -154,7 +172,7 @@ var ParamSets = params.Sets{
 				Params: params.Params{
 					"Layer.Inhib.ActAvg.Init": "0.1",
 					"Layer.Inhib.Layer.On":    "false",
-					"Layer.Inhib.Pool.Gi":     "2.2",
+					"Layer.Inhib.Pool.Gi":     "2.4",
 					"Layer.Inhib.Pool.On":     "true",
 				}},
 		},
@@ -206,13 +224,14 @@ type Sim struct {
 	TrlAvgSSE      float64 `inactive:"+" desc:"current trial's average sum squared error"`
 	TrlCosDiff     float64 `inactive:"+" desc:"current trial's cosine difference"`
 
-	EpcSSE     float64 `inactive:"+" desc:"last epoch's total sum squared error"`
-	EpcAvgSSE  float64 `inactive:"+" desc:"last epoch's average sum squared error (average over trials, and over units within layer)"`
-	EpcPctErr  float64 `inactive:"+" desc:"last epoch's percent of trials that had SSE > 0 (subject to .5 unit-wise tolerance)"`
-	EpcPctCor  float64 `inactive:"+" desc:"last epoch's percent of trials that had SSE == 0 (subject to .5 unit-wise tolerance)"`
-	EpcCosDiff float64 `inactive:"+" desc:"last epoch's average cosine difference for output layer (a normalized error measure, maximum of 1 when the minus phase exactly matches the plus)"`
-	FirstZero  int     `inactive:"+" desc:"epoch at when Mem err first went to zero"`
-	NZero      int     `inactive:"+" desc:"number of epochs in a row with zero Mem err"`
+	EpcSSE        float64 `inactive:"+" desc:"last epoch's total sum squared error"`
+	EpcAvgSSE     float64 `inactive:"+" desc:"last epoch's average sum squared error (average over trials, and over units within layer)"`
+	EpcPctErr     float64 `inactive:"+" desc:"last epoch's percent of trials that had SSE > 0 (subject to .5 unit-wise tolerance)"`
+	EpcPctCor     float64 `inactive:"+" desc:"last epoch's percent of trials that had SSE == 0 (subject to .5 unit-wise tolerance)"`
+	EpcCosDiff    float64 `inactive:"+" desc:"last epoch's average cosine difference for output layer (a normalized error measure, maximum of 1 when the minus phase exactly matches the plus)"`
+	EpcPerTrlMSec float64 `inactive:"+" desc:"how long did the epoch take per trial in wall-clock milliseconds"`
+	FirstZero     int     `inactive:"+" desc:"epoch at when Mem err first went to zero"`
+	NZero         int     `inactive:"+" desc:"number of epochs in a row with zero Mem err"`
 
 	// internal state - view:"-"
 	SumSSE       float64          `view:"-" inactive:"+" desc:"sum to increment as we go through epoch"`
@@ -228,7 +247,10 @@ type Sim struct {
 	TstTrlPlot   *eplot.Plot2D    `view:"-" desc:"the test-trial plot"`
 	TstCycPlot   *eplot.Plot2D    `view:"-" desc:"the test-cycle plot"`
 	RunPlot      *eplot.Plot2D    `view:"-" desc:"the run plot"`
+	TrnEpcHdrs   bool             `view:"-" desc:"headers written"`
 	TrnEpcFile   *os.File         `view:"-" desc:"log file"`
+	TstEpcHdrs   bool             `view:"-" desc:"headers written"`
+	TstEpcFile   *os.File         `view:"-" desc:"log file"`
 	RunFile      *os.File         `view:"-" desc:"log file"`
 	TmpVals      []float32        `view:"-" desc:"temp slice for holding values -- prevent mem allocs"`
 	LayStatNms   []string         `view:"-" desc:"names of layers to collect more detailed stats on (avg act, etc)"`
@@ -244,6 +266,7 @@ type Sim struct {
 
 	// HIP RL Interface: Stores the custom error data for later reading by the HTTP API
 	NameErrorResult *NameError
+	LastEpcTime  time.Time        `view:"-" desc:"timer for last epoch"`
 }
 
 // this registers this Sim Type and gives it properties that e.g.,
@@ -351,15 +374,19 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 	ca3.SetRelPos(relpos.Rel{Rel: relpos.Above, Other: "DG", YAlign: relpos.Front, XAlign: relpos.Left, Space: 0})
 	ca1.SetRelPos(relpos.Rel{Rel: relpos.RightOf, Other: "CA3", YAlign: relpos.Front, Space: 2})
 
-	net.ConnectLayers(in, ecin, prjn.NewOneToOne(), emer.Forward)
-	net.ConnectLayers(ecout, ecin, prjn.NewOneToOne(), emer.Back)
+	onetoone := prjn.NewOneToOne()
+	pool1to1 := prjn.NewPoolOneToOne()
+	full := prjn.NewFull()
+
+	net.ConnectLayers(in, ecin, onetoone, emer.Forward)
+	net.ConnectLayers(ecout, ecin, onetoone, emer.Back)
 
 	// EC <-> CA1 encoder pathways
-	pj := net.ConnectLayersPrjn(ecin, ca1, prjn.NewPoolOneToOne(), emer.Forward, &hip.EcCa1Prjn{})
+	pj := net.ConnectLayersPrjn(ecin, ca1, pool1to1, emer.Forward, &hip.EcCa1Prjn{})
 	pj.SetClass("EcCa1Prjn")
-	pj = net.ConnectLayersPrjn(ca1, ecout, prjn.NewPoolOneToOne(), emer.Forward, &hip.EcCa1Prjn{})
+	pj = net.ConnectLayersPrjn(ca1, ecout, pool1to1, emer.Forward, &hip.EcCa1Prjn{})
 	pj.SetClass("EcCa1Prjn")
-	pj = net.ConnectLayersPrjn(ecout, ca1, prjn.NewPoolOneToOne(), emer.Back, &hip.EcCa1Prjn{})
+	pj = net.ConnectLayersPrjn(ecout, ca1, pool1to1, emer.Back, &hip.EcCa1Prjn{})
 	pj.SetClass("EcCa1Prjn")
 
 	// Perforant pathway
@@ -368,25 +395,26 @@ func (ss *Sim) ConfigNet(net *leabra.Network) {
 
 	pj = net.ConnectLayersPrjn(ecin, dg, ppath, emer.Forward, &hip.CHLPrjn{})
 	pj.SetClass("HippoCHL")
-	pj = net.ConnectLayersPrjn(ecin, ca3, ppath, emer.Forward, &hip.CHLPrjn{})
-	pj.SetClass("HippoCHL")
+
+	pj = net.ConnectLayersPrjn(ecin, ca3, ppath, emer.Forward, &hip.EcCa1Prjn{})
+	pj.SetClass("PPath")
+	pj = net.ConnectLayersPrjn(ca3, ca3, full, emer.Lateral, &hip.EcCa1Prjn{})
+	pj.SetClass("PPath")
 
 	// Mossy fibers
 	mossy := prjn.NewUnifRnd()
-	mossy.PCon = 0.05
+	mossy.PCon = 0.02
 	pj = net.ConnectLayersPrjn(dg, ca3, mossy, emer.Forward, &hip.CHLPrjn{}) // no learning
 	pj.SetClass("HippoCHL")
 
 	// Schafer collaterals
-	pj = net.ConnectLayersPrjn(ca3, ca3, prjn.NewFull(), emer.Lateral, &hip.CHLPrjn{})
-	pj.SetClass("HippoCHL")
-	pj = net.ConnectLayersPrjn(ca3, ca1, prjn.NewFull(), emer.Forward, &hip.CHLPrjn{})
+	pj = net.ConnectLayersPrjn(ca3, ca1, full, emer.Forward, &hip.CHLPrjn{})
 	pj.SetClass("HippoCHL")
 
-	// using 3 threads :)
+	// using 3 threads total
 	dg.SetThread(1)
-	ca3.SetThread(2)
-	ca1.SetThread(3)
+	ca3.SetThread(1) // for larger models, could put on separate thread
+	ca1.SetThread(2)
 
 	// note: if you wanted to change a layer type from e.g., Target to Compare, do this:
 	// outLay.SetType(emer.Compare)
@@ -467,10 +495,20 @@ func (ss *Sim) AlphaCyc(train bool) {
 	}
 
 	ca1 := ss.Net.LayerByName("CA1").(leabra.LeabraLayer).AsLeabra()
+	ca3 := ss.Net.LayerByName("CA3").(leabra.LeabraLayer).AsLeabra()
 	ecin := ss.Net.LayerByName("ECin").(leabra.LeabraLayer).AsLeabra()
 	ecout := ss.Net.LayerByName("ECout").(leabra.LeabraLayer).AsLeabra()
 	ca1FmECin := ca1.RcvPrjns.SendName("ECin").(*hip.EcCa1Prjn)
 	ca1FmCa3 := ca1.RcvPrjns.SendName("CA3").(*hip.CHLPrjn)
+	ca3FmDg := ca3.RcvPrjns.SendName("DG").(leabra.LeabraPrjn).AsLeabra()
+
+	// First Quarter: CA1 is driven by ECin, not by CA3 recall
+	// (which is not really active yet anyway)
+	ca1FmECin.WtScale.Abs = 1
+	ca1FmCa3.WtScale.Abs = 0
+
+	dgwtscale := ca3FmDg.WtScale.Rel
+	ca3FmDg.WtScale.Rel = 0 // turn off DG input to CA3 in first quarter
 
 	if train {
 		ecout.SetType(emer.Target) // clamp a plus phase during testing
@@ -478,11 +516,6 @@ func (ss *Sim) AlphaCyc(train bool) {
 		ecout.SetType(emer.Compare) // don't clamp
 	}
 	ecout.UpdateExtFlags() // call this after updating type
-
-	// First Quarter: CA1 is driven by ECin, not by CA3 recall
-	// (which is not really active yet anyway)
-	ca1FmECin.WtScale.Abs = 1
-	ca1FmCa3.WtScale.Abs = 0
 
 	ss.Net.AlphaCycInit()
 	ss.Time.AlphaCycStart()
@@ -510,6 +543,11 @@ func (ss *Sim) AlphaCyc(train bool) {
 		case 1: // Second, Third Quarters: CA1 is driven by CA3 recall
 			ca1FmECin.WtScale.Abs = 0
 			ca1FmCa3.WtScale.Abs = 1
+			if train {
+				ca3FmDg.WtScale.Rel = dgwtscale // restore after 1st quarter
+			} else {
+				ca3FmDg.WtScale.Rel = 1 // significantly weaker for recall
+			}
 			ss.Net.GScaleFmAvgAct() // update computed scaling factors
 			ss.Net.InitGInc()       // scaling params change, so need to recompute all netins
 		case 3: // Fourth Quarter: CA1 back to ECin drive only
@@ -539,6 +577,9 @@ func (ss *Sim) AlphaCyc(train bool) {
 			}
 		}
 	}
+
+	ca3FmDg.WtScale.Rel = dgwtscale // restore
+	ca1FmCa3.WtScale.Abs = 1
 
 	if train {
 		ss.Net.DWt()
@@ -717,6 +758,7 @@ func (ss *Sim) MemStats(train bool) {
 		}
 	} else { // test
 		if cmpN > 0 { // should be
+			trgOnWasOffCmp /= cmpN
 			if trgOnWasOffCmp < ss.MemThr && trgOffWasOn < ss.MemThr {
 				ss.Mem = 1
 			} else {
@@ -797,11 +839,9 @@ func (ss *Sim) Stopped() {
 	ss.IsRunning = false
 	if ss.Win != nil {
 		vp := ss.Win.WinViewport2D()
-		vp.BlockUpdates()
 		if ss.ToolBar != nil {
 			ss.ToolBar.UpdateActions()
 		}
-		vp.UnblockUpdates()
 		vp.SetNeedsFullRender()
 	}
 }
@@ -1006,7 +1046,12 @@ func (ss *Sim) OpenPats() {
 // any file names that are saved.
 func (ss *Sim) RunName() string {
 	if ss.Tag != "" {
-		return ss.Tag + "_" + ss.ParamsName()
+		pnm := ss.ParamsName()
+		if pnm == "Base" {
+			return ss.Tag
+		} else {
+			return ss.Tag + "_" + pnm
+		}
 	} else {
 		return ss.ParamsName()
 	}
@@ -1150,8 +1195,9 @@ func (ss *Sim) LogTrnEpc(dt *etable.Table) {
 	// note: essential to use Go version of update when called from another goroutine
 	ss.TrnEpcPlot.GoUpdate()
 	if ss.TrnEpcFile != nil {
-		if ss.TrainEnv.Run.Cur == 0 && epc == 0 {
+		if !ss.TrnEpcHdrs {
 			dt.WriteCSVHeaders(ss.TrnEpcFile, etable.Tab)
+			ss.TrnEpcHdrs = true
 		}
 		dt.WriteCSVRow(ss.TrnEpcFile, row, etable.Tab)
 	}
@@ -1317,10 +1363,20 @@ func (ss *Sim) LogTstEpc(dt *etable.Table) {
 	tix := etable.NewIdxView(trl)
 	epc := ss.TrainEnv.Epoch.Prv // ?
 
+	if ss.LastEpcTime.IsZero() {
+		ss.EpcPerTrlMSec = 0
+	} else {
+		iv := time.Now().Sub(ss.LastEpcTime)
+		nt := ss.TrainAB.Rows * 4 // 1 train and 3 tests
+		ss.EpcPerTrlMSec = float64(iv) / (float64(nt) * float64(time.Millisecond))
+	}
+	ss.LastEpcTime = time.Now()
+
 	// note: this shows how to use agg methods to compute summary data from another
 	// data table, instead of incrementing on the Sim
 	dt.SetCellFloat("Run", row, float64(ss.TrainEnv.Run.Cur))
 	dt.SetCellFloat("Epoch", row, float64(epc))
+	dt.SetCellFloat("PerTrlMSec", row, ss.EpcPerTrlMSec)
 	dt.SetCellFloat("SSE", row, agg.Sum(tix, "SSE")[0])
 	dt.SetCellFloat("AvgSSE", row, agg.Mean(tix, "AvgSSE")[0])
 	dt.SetCellFloat("PctErr", row, agg.PropIf(tix, "SSE", func(idx int, val float64) bool {
@@ -1364,6 +1420,13 @@ func (ss *Sim) LogTstEpc(dt *etable.Table) {
 
 	// note: essential to use Go version of update when called from another goroutine
 	ss.TstEpcPlot.GoUpdate()
+	if ss.TstEpcFile != nil {
+		if !ss.TstEpcHdrs {
+			dt.WriteCSVHeaders(ss.TstEpcFile, etable.Tab)
+			ss.TstEpcHdrs = true
+		}
+		dt.WriteCSVRow(ss.TstEpcFile, row, etable.Tab)
+	}
 }
 
 func (ss *Sim) ConfigTstEpcLog(dt *etable.Table) {
@@ -1375,6 +1438,7 @@ func (ss *Sim) ConfigTstEpcLog(dt *etable.Table) {
 	sch := etable.Schema{
 		{"Run", etensor.INT64, nil, nil},
 		{"Epoch", etensor.INT64, nil, nil},
+		{"PerTrlMSec", etensor.FLOAT64, nil, nil},
 		{"SSE", etensor.FLOAT64, nil, nil},
 		{"AvgSSE", etensor.FLOAT64, nil, nil},
 		{"PctErr", etensor.FLOAT64, nil, nil},
@@ -1396,6 +1460,7 @@ func (ss *Sim) ConfigTstEpcPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot
 	// order of params: on, fixMin, min, fixMax, max
 	plt.SetColParams("Run", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
 	plt.SetColParams("Epoch", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
+	plt.SetColParams("PerTrlMSec", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
 	plt.SetColParams("SSE", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
 	plt.SetColParams("AvgSSE", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
 	plt.SetColParams("PctErr", eplot.Off, eplot.FixMin, 0, eplot.FixMax, 1)
@@ -1487,9 +1552,15 @@ func (ss *Sim) LogRun(dt *etable.Table) {
 
 	params := ss.RunName() // includes tag
 
+	fzero := ss.FirstZero
+	if fzero < 0 {
+		fzero = ss.MaxEpcs
+	}
+
 	dt.SetCellFloat("Run", row, float64(run))
 	dt.SetCellString("Params", row, params)
-	dt.SetCellFloat("FirstZero", row, float64(ss.FirstZero))
+	dt.SetCellFloat("NEpochs", row, float64(ss.TstEpcLog.Rows))
+	dt.SetCellFloat("FirstZero", row, float64(fzero))
 	dt.SetCellFloat("SSE", row, agg.Mean(epcix, "SSE")[0])
 	dt.SetCellFloat("AvgSSE", row, agg.Mean(epcix, "AvgSSE")[0])
 	dt.SetCellFloat("PctErr", row, agg.Mean(epcix, "PctErr")[0])
@@ -1531,6 +1602,7 @@ func (ss *Sim) ConfigRunLog(dt *etable.Table) {
 	sch := etable.Schema{
 		{"Run", etensor.INT64, nil, nil},
 		{"Params", etensor.STRING, nil, nil},
+		{"NEpochs", etensor.FLOAT64, nil, nil},
 		{"FirstZero", etensor.FLOAT64, nil, nil},
 		{"SSE", etensor.FLOAT64, nil, nil},
 		{"AvgSSE", etensor.FLOAT64, nil, nil},
@@ -1552,6 +1624,7 @@ func (ss *Sim) ConfigRunPlot(plt *eplot.Plot2D, dt *etable.Table) *eplot.Plot2D 
 	plt.SetTable(dt)
 	// order of params: on, fixMin, min, fixMax, max
 	plt.SetColParams("Run", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
+	plt.SetColParams("NEpochs", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
 	plt.SetColParams("FirstZero", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
 	plt.SetColParams("SSE", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
 	plt.SetColParams("AvgSSE", eplot.Off, eplot.FixMin, 0, eplot.FloatMax, 0)
@@ -1711,9 +1784,6 @@ func (ss *Sim) ConfigGui() *gi.Window {
 				if sig == int64(gi.DialogAccepted) {
 					val := gi.StringPromptDialogValue(dlg)
 					idxs := ss.TestEnv.Table.RowsByString("Name", val, etable.Contains, etable.IgnoreCase)
-
-					fmt.Printf("idxs %v\n", idxs)
-
 					if len(idxs) == 0 {
 						gi.PromptDialog(nil, gi.DlgOpts{Title: "Name Not Found", Prompt: "No patterns found containing: " + val}, gi.AddOk, gi.NoCancel, nil, nil)
 					} else {
@@ -1887,13 +1957,13 @@ func (ss *Sim) CmdArgs() {
 	if saveEpcLog {
 		var err error
 		fnm := ss.LogFileName("epc")
-		ss.TrnEpcFile, err = os.Create(fnm)
+		ss.TstEpcFile, err = os.Create(fnm)
 		if err != nil {
 			log.Println(err)
-			ss.TrnEpcFile = nil
+			ss.TstEpcFile = nil
 		} else {
-			fmt.Printf("Saving epoch log to: %v\n", fnm)
-			defer ss.TrnEpcFile.Close()
+			fmt.Printf("Saving test epoch log to: %v\n", fnm)
+			defer ss.TstEpcFile.Close()
 		}
 	}
 	if saveRunLog {
@@ -1911,6 +1981,9 @@ func (ss *Sim) CmdArgs() {
 	if ss.SaveWts {
 		fmt.Printf("Saving final weights per run\n")
 	}
+	fmt.Printf("Running %d Runs\n", ss.MaxRuns)
 	ss.Train()
 	*/
+	fnm := ss.LogFileName("runs")
+	ss.RunStats.SaveCSV(gi.FileName(fnm), etable.Tab, etable.Headers)
 }
