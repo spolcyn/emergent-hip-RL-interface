@@ -134,6 +134,10 @@ ss.Train()
 */
 ```
 
+## Tips for Updating:
+1. If you're familiar with `git`, using `git add --interactive` with the `patch` selection can be a very efficient way to apply just the desired updates to the API-compatible `hip.go`.
+2. Regardless of `git` familiarity, the `diff` command is an effective way to see exactly what's different between an API-compatible `hip.go` and a new version of `hip.go`.
+
 # Contributing
 
 If something doesn't work the way you expected to or you have ideas for future improvements, please [open an issue](https://github.com/spolcyn/emergent-hippocampus-RL/issues) or submit a pull request.
