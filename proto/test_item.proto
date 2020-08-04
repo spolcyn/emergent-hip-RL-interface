@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package hipmodel;
+
+import "tensor.proto";
+
+message TestItem {
+  uint32 version = 1;
+  hipmodel.Tensor corrupted_pattern = 2;
+  hipmodel.Tensor target_pattern = 3;
+}
+
+option go_package = "pkg/hipmodel";

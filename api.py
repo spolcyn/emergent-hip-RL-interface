@@ -5,12 +5,19 @@
 # api.py
 # Provides the Python API for interacting with the hippocampus model
 
-import requests
 import time
 import random
-import numpy as np
 import json
 import logging
+
+import requests
+import numpy as np
+
+import hip_util
+
+import tensor_pb2
+import dataset_update_pb2
+import test_item_pb2
 
 # basic default parameters for the model server
 SERVER_URL="http://localhost"
@@ -36,9 +43,9 @@ class HipAPI:
 
         return SERVER_URL + ":" + PORT + api_endpoint
 
-    def MakeRequest(self, verb, url, data):
+    def MakeRequest(self, verb, url, data, headers=None):
         """
-        Send an HTTP request using the provided parameters and format response into desired tuple. 
+        Send an HTTP request using the provided parameters and format response into desired tuple.
 
         Args:
            verb (string): The HTTP verb to use (e.g., GET, POST, PUT)
@@ -49,7 +56,7 @@ class HipAPI:
             (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
         """
 
-        response = requests.request(verb, url=url, data=data)
+        response = requests.request(verb, url=url, data=data, headers=headers)
 
         return response, response.ok
 
@@ -82,17 +89,19 @@ class HipAPI:
 
         api_endpoint = "/dataset/train/update"
 
-        # Format the list of numpy arrays into a format parseable by the backend
-        # Without replacing square brackets with parantheses, the JSON parser sometimes
-        #   parses each subarray to an individual array, instead of leaving it as the
-        #   representation of an n-d array
-        jsonpats = [json.dumps(np.ndarray.tolist(p)) for p in patterns]
-        jsonpats = [p.replace('[', '(') for p in jsonpats]
-        jsonpats = [p.replace(']', ')') for p in jsonpats]
+        dataset = hip_util.make_tensor_from_numpy(np.asarray(patterns))
 
-        data = {"source":"body", "patterns":jsonpats, "shape": json.dumps(patterns[0].shape)}
+        update = dataset_update_pb2.DatasetUpdate()
+        update.version = 1
+        update.source = "body"
+        update.dataset.CopyFrom(dataset)
 
-        return self.MakeRequest('PUT', self.MakeURLString(api_endpoint), data)
+        data = update.SerializeToString()
+
+        return self.MakeRequest('PUT',
+                                self.MakeURLString(api_endpoint),
+                                data,
+                                headers={'Content-Type':'application/octet-stream'})
 
     def TestPattern(self, corruptedPattern, targetPattern):
         """
@@ -100,9 +109,9 @@ class HipAPI:
 
         Args:
             corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
-            targetPattern (4-D Numpy integer array): Complete original pattern with no data removed. 
+            targetPattern (4-D Numpy integer array): Complete original pattern with no data removed.
 
-        Returns: 
+        Returns:
             (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
             1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
             2) The Hamming distance between the recalled pattern and the target pattern.
@@ -112,9 +121,19 @@ class HipAPI:
 
         assert corruptedPattern.shape == targetPattern.shape
 
-        d = {'shape': json.dumps(corruptedPattern.shape), 'corruptedPattern': json.dumps(np.ndarray.tolist(corruptedPattern)), 'targetPattern':json.dumps(np.ndarray.tolist(targetPattern))}
+        test_item = test_item_pb2.TestItem()
+        test_item.version = 1
+        test_item.corrupted_pattern.CopyFrom(
+                hip_util.make_tensor_from_numpy(corruptedPattern))
+        test_item.target_pattern.CopyFrom(
+                hip_util.make_tensor_from_numpy(targetPattern))
 
-        return self.MakeRequest('POST', self.MakeURLString(api_endpoint), d)
+        data = test_item.SerializeToString()
+
+        return self.MakeRequest('POST',
+                                 self.MakeURLString(api_endpoint),
+                                 data,
+                                 headers={'Content-Type':'application/octet-stream'})
 
     def StartTraining(self, maxruns = 1, maxepcs = 50):
         """
@@ -141,8 +160,8 @@ class HipAPI:
 
     def Step(self, cues, targets, iterations):
         """
-        Steps the model forward one cycle. Similar to OpenAI gym's RL setup. Model must be trained prior to calling "step". 
-        Generally, this method should be re-implemented for an RL environment using the basic API methods. 
+        Steps the model forward one cycle. Similar to OpenAI gym's RL setup. Model must be trained prior to calling "step".
+        Generally, this method should be re-implemented for an RL environment using the basic API methods.
         This method can serve as a useful template for creating such methods.
 
         Args:
@@ -185,7 +204,7 @@ if TEST_TESTITEM:
     bitstring = '0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0'
     bitlist = bitstring.split(",") # convert to list
     bitlist = [int(x) for x in bitlist] # convert to ints
-    arr = np.asarray(bitlist, dtype="int") # convert to numpy array
+    arr = np.asarray(bitlist, dtype="float") # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
     response, success = tti_hipapi.TestPattern(arr, arr)

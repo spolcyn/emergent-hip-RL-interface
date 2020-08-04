@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package hipmodel;
+
+import "tensor.proto";
+
+message DatasetUpdate {
+  uint32 version = 1;
+  string source = 2;
+  hipmodel.Tensor dataset = 3;
+  string filename = 4;
+}
+
+option go_package = "pkg/hipmodel";

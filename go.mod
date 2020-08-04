@@ -9,6 +9,8 @@ require (
 	github.com/goki/gi v1.0.3
 	github.com/goki/ki v1.0.0
 	github.com/goki/mat32 v1.0.1
+	github.com/golang/protobuf v1.4.2
 	github.com/labstack/echo v3.3.10+incompatible
 	github.com/labstack/gommon v0.3.0 // indirect
+	google.golang.org/protobuf v1.25.0
 )

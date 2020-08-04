@@ -1,6 +1,13 @@
-*.swp
 .DS_Store
 *.csv
-tags
 *.npy
+
+# development environment
+*.swp
+tags
+__pycache__/
+
+# compiled files
 model.exe
+*_pb2.py
+*.pb.go

@@ -17,8 +17,9 @@ import (
 
 /* Update the data used for training/testing the model and re-init the network */
 func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
+	dataset := update.Dataset
+	DPrintf("Update dataset: %v\n", dataset)
 
-	DPrintf("Update: %v\n", update)
 	var err error = nil
 
 	// update dataset from file
@@ -32,37 +33,23 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 		err = ss.OpenPatComma(ss.TestAB, update.Filename, "Testing Patterns", "Same as Training Patterns")
 
 	} else if update.Source == "body" {
-		DPrintf("pattern len: %v\n", len(update.Patterns))
-		DPrintf("body: \n\n%v\n", update.Patterns)
-		DPrintf("updating training data with %v patterns\n", len(update.Patterns))
+		DPrintf("protobuf dimensions: %v", dataset.Dimensions)
+		DPrintf("protobuf patterns: %v", dataset.Data)
 
 		// parse patterns to array of etensors
-		pats := make([]*etensor.Float32, len(update.Patterns))
-		for i, jsonPat := range update.Patterns {
-			DPrintf("parsing:\n\n%v\n\nwith shape: %v\n", jsonPat, update.Shape)
-			pats[i] = ParseTensorFromJSON(update.Shape, jsonPat)
-		}
+		patterns := etensor.NewFloat32(convert_slice_to_int(dataset.Dimensions), nil, nil)
+		patterns.SetFloats(dataset.Data)
 
 		// Create training etable
 		trainpats := etable.NewTable("Training Patterns")
 		trainpats.SetMetaData("desc", "Training data from API")
-		trainpats.SetNumRows(len(pats))
-
-		// get pattern shape and compute column shape
-		patShape := pats[0].Shape.Shp
-		colShape := append([]int{len(pats)}, patShape...)
-		DPrintf("Patshape: %v || Colshape: %v", patShape, colShape)
+		num_patterns := patterns.Shape.Shp[0]
+		trainpats.SetNumRows(num_patterns)
 
 		// setup columns for filling
-		rowNames := etensor.NewString([]int{len(pats)}, nil, []string{"row"})
-		col := etensor.NewFloat32(colShape, nil, []string{"row"})
-
-		// copy array of patterns into a single etensor column
-		for i, tsr := range pats {
-			DPrintf("i: %v || tsr: \n%v\n", i, tsr)
-			rowNames.Set1D(i, fmt.Sprintf("trn-%v", i))
-			col.SubSpace([]int{i}).CopyFrom(tsr)
-		}
+		rowNames := etensor.NewString([]int{num_patterns}, nil, []string{"row"})
+		col := etensor.NewFloat32(patterns.Shape.Shp, nil, []string{"row"})
+		col.CopyFrom(patterns)
 
 		DPrintf("Column: \n\n%v\n\n", col)
 
@@ -82,8 +69,6 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 
 		DPrintf("\n\nTrain Env AFTER: \n\n%v\n", ss.TrainEnv)
 		DPrintf("\n\nTest Env AFTER: \n\n%v\n", ss.TestEnv)
-
-		DPrintf("parsed patterns:\n\n%v\n", pats)
 	} else {
 		return errors.New("Invalid update method")
 	}
@@ -92,7 +77,7 @@ func (ss *Sim) RestUpdateTrainingData(update *DatasetUpdate) error {
 }
 
 /* Test an item */
-func (ss *Sim) RestTestPattern(tr *TestRequest) (*NameError, error) {
+func (ss *Sim) RestTestPattern(tr *TestItem) (*NameError, error) {
 	if ss.IsRunning {
 		return nil, errors.New("Model is already running, couldn't test item yet")
 	}
@@ -101,9 +86,13 @@ func (ss *Sim) RestTestPattern(tr *TestRequest) (*NameError, error) {
 	DPrintf("testing pattern: %v\n", tr.CorruptedPattern)
 
 	// setup the environment as we want it
-	corrTsr := ParseTensorFromJSON(tr.Shape, tr.CorruptedPattern)
-	targTsr := ParseTensorFromJSON(tr.Shape, tr.TargetPattern)
-	ss.UpdateTestEnvWithTestPatterns(corrTsr, targTsr)
+	corrupted_tensor := etensor.NewFloat32(convert_slice_to_int(tr.CorruptedPattern.Dimensions), nil, nil)
+	corrupted_tensor.SetFloats(tr.CorruptedPattern.Data)
+
+	target_tensor := etensor.NewFloat32(convert_slice_to_int(tr.TargetPattern.Dimensions), nil, nil)
+	target_tensor.SetFloats(tr.TargetPattern.Data)
+
+	ss.UpdateTestEnvWithTestPatterns(corrupted_tensor, target_tensor)
 
 	ss.TestItem(0) // always use 0, that's where we'll put the item
 	ss.IsRunning = false
