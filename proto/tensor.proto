@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package hipmodel;
+
+message Tensor {
+  uint32 version = 1;
+  repeated uint32 dimensions = 2;
+  repeated double data = 3 [packed=true];
+}
+
+option go_package = "pkg/hipmodel";

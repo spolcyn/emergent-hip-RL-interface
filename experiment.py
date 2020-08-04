@@ -5,13 +5,16 @@
 # experiment.py
 # Runs an experiment using the Emergent hippocampus Python API
 
-import numpy as np
-import api as hipapi
 import logging
 import time
+
+import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-from matplotlib import pyplot
+
+import api as hipapi
+import hip_util
+
+import NameError_pb2
 
 # create module logger
 logger = logging.getLogger(__name__)
@@ -27,7 +30,6 @@ def CorruptPattern(pattern, ratio):
     Returns:
         Numpy array: A copy of the original pattern, corrupted the prescribed amount.
     """
-
 
     # calc number of units
     shape = list(pattern.shape)
@@ -69,7 +71,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
         corruptionRatios (Numpy array of floats): Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].
         sparsity (float): Percentage of neurons as a decimal that should be inactive in the generated patterns.
 
-    Returns: 
+    Returns:
         Numpy array: Array contains percentage of items correctly recalled for each trial size.
     """
 
@@ -86,7 +88,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     patternlist = []
 
     # config pattern shape-related properties
-    shape = [6,2,3,4] 
+    shape = [6,2,3,4]
     totalValues = 1
     for v in shape:
         totalValues *= v
@@ -95,7 +97,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     for i in range(maxPatterns):
 
         # configure pattern
-        pat = np.ones(totalValues, dtype=int) 
+        pat = np.ones(totalValues)
         pat[:int(totalValues*sparsity)] = 0
         np.random.shuffle(pat)
         pat = np.reshape(pat, tuple(shape))
@@ -116,7 +118,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
         currentData = patternlist[:minPatterns + step * c]
         logger.debug("CurrentData: %s", currentData)
 
-        # send new patterns 
+        # send new patterns
         response, success = ha.UpdateTrainingDataPatterns(currentData)
         if success:
             logger.debug("Successful: %s", response.text)
@@ -137,19 +139,22 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
                 # run all patterns within trial
                 successfulRecalls = 0
 
-                for idx, p in enumerate(currentData): 
+                for idx, p in enumerate(currentData):
                     corrupted = CorruptPattern(p, r)
                     response, success = ha.TestPattern(corrupted, p)
 
-                    closestPattern = response.json()["ClosestPattern"]["Values"] # returned as list
-                    recallSuccessful = (closestPattern == p.reshape((totalValues)).tolist()) # test if the closest pattern is the same as the target
-
+                    name_error_result = NameError_pb2.NameError()
+                    name_error_result.ParseFromString(response.content)
+                    closest_pattern = np.asarray(name_error_result.closest_pattern.data)
+                    closest_pattern = closest_pattern.reshape(tuple(name_error_result.closest_pattern.dimensions))
+                    # test if the closest pattern is the same as the target
+                    recallSuccessful = (np.array_equal(closest_pattern, p))
                     if recallSuccessful:
                         successfulRecalls += 1
 
-                    logger.debug("Closest pattern: %s", closestPattern)
-                    logger.debug("Input pattern: %s", p.reshape((totalValues)).tolist())
-                    logger.debug("Corrupted pattern: %s", corrupted.reshape((totalValues)).tolist())
+                    logger.debug("Closest pattern: %s", closest_pattern)
+                    logger.debug("Input pattern: %s", p)
+                    logger.debug("Corrupted pattern: %s", corrupted)
 
                 results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
 

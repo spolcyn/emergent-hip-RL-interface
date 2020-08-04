@@ -1,0 +1,6 @@
+# Math libraries
+numpy
+
+# IPC libraries
+protobuf
+requests

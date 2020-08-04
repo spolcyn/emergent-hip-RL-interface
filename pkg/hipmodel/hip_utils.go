@@ -49,7 +49,7 @@ func (ss *Sim) OpenPatComma(dt *etable.Table, fname, name, desc string) error {
 // Finds the most similar vocabulary pattern to a provided activation set within a vocabulary
 func FindMostSimilarVocabPattern(pattern *etensor.Float32, vocab patgen.Vocab) *etensor.Float32 {
 
-	distance := math.MaxInt32
+	var distance float32 = math.MaxFloat32
 	var mostSimilar *etensor.Float32
 
 	// iterate through all vocab items, storing the one with the lowest distance from our pattern
@@ -66,24 +66,18 @@ func FindMostSimilarVocabPattern(pattern *etensor.Float32, vocab patgen.Vocab) *
 
 }
 
-// Struct to store relevant parts of the name error
-type NameError struct {
-	Distance       int
-	ClosestPattern *etensor.Float32
-}
-
 // Given a candidate and a reference, outputs a distance score between them
 // Currently uses Hamming Distance
 // Tensors are float-types, so can't easily use XOR as one could on a bit array
 // On our size tensors, shouldn't matter -- if tensors get too big, also easily parallelizable
-func CalculateDistance(t1, t2 *etensor.Float32) int {
+func CalculateDistance(t1, t2 *etensor.Float32) float32 {
 
 	// would be better to throw an error here
 	if !SlicesAreEqual(t1.ShapeObj().Shp, t2.ShapeObj().Shp) {
 		panic("tensors don't have the same shape!")
 	}
 
-	distance := 0
+	var distance float32 = 0.0
 
 	for i := 0; i < t1.ShapeObj().Len(); i++ {
 		if math.Abs(math.Round(float64(t1.Value1D(i)))) != math.Abs(math.Round(float64(t2.Value1D(i)))) {
@@ -106,14 +100,14 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 
 	DPrintf("Outpattern:\n\n%v", outPattern)
 
-	distance := math.MaxInt32
+	var distance float32 = math.MaxFloat32
 	var mostSimilar *etensor.Float32
 
 	// find closest pattern in the training dataset to the output pattern
 	for i := 0; i < ss.TrainAB.NumRows(); i++ {
 
 		tmpPattern := ss.TrainAB.ColByName("Input").SubSpace([]int{i}).(*etensor.Float32)
-		tmpDistance := CalculateDistance(outPattern, tmpPattern)
+		var tmpDistance float32 = CalculateDistance(outPattern, tmpPattern)
 
 		if tmpDistance < distance {
 			distance = tmpDistance
@@ -124,7 +118,17 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 	DPrintf("Distance: %v | ClosestPattern: %v", distance, mostSimilar)
 
 	// set the error pattern
-	ss.NameErrorResult = &NameError{Distance: distance, ClosestPattern: mostSimilar.Clone().(*etensor.Float32)}
+	dimensions := make([]uint32, len(mostSimilar.Shape.Shp))
+	for idx, val := range mostSimilar.Shape.Shp {
+		dimensions[idx] = uint32(val)
+	}
+	closest_tensor := Tensor{
+		Version:    1,
+		Dimensions: dimensions,
+		Data:       convert_slice_to_float64(mostSimilar.Values)}
+
+	name_error := &NameError{Version: 1, Distance: distance, ClosestPattern: &closest_tensor}
+	ss.NameErrorResult = name_error
 }
 
 // Updates the testenv with a pattern so that the index 0 of the testenv will return the test pattern

@@ -8,12 +8,14 @@
 package hipmodel
 
 import (
-	"encoding/json"
 	"fmt"
-	"github.com/labstack/echo"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"sync"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/labstack/echo"
 )
 
 /* The hippocampus API server, managing an API server and a hippocampus model */
@@ -42,19 +44,6 @@ func (hs *HipServer) Init(address string, sim *Sim) {
 
 /*** API-Related Data Types ***/
 
-type DatasetUpdate struct {
-	Source   string   `json:"method"` // source of the new dataset: "file", if reading from a file, or "body", if transmitted in request body
-	Filename string   `json:"filename"`
-	Patterns []string `json:"patterns"` // the patterns, with subarrays marked using ( ) to ensure proper JSON parsing
-	Shape    string   `json:"shape"`    // patterns' shape. all must be the same size
-}
-
-type TestRequest struct {
-	Shape            string `json:"shape"`            // the pattern's shape
-	CorruptedPattern string `json:"corruptedPattern"` // the corrupted pattern's numpy json dump representation
-	TargetPattern    string `json:"targetPattern"`    // the target pattern's numpy json dump representation
-}
-
 type TrainRequest struct {
 	MaxRuns int `json:"maxruns" query:"maxruns" form:"maxruns"` // max runs to train for
 	MaxEpcs int `json:"maxepcs" query:"maxepcs" form:"maxepcs"` // max epochs to train for
@@ -65,6 +54,15 @@ type TrainRequest struct {
 /* Setup the API endpoints */
 func (hs *HipServer) setupRoutes() {
 
+	get_protobuf_binary := func(req *http.Request) []byte {
+		data, err := ioutil.ReadAll(req.Body)
+		if err != nil {
+			log.Fatalf("Unable to read message from request: %v", err)
+		}
+
+		return data
+	}
+
 	// update training data to new dataset
 	hs.es.PUT("/dataset/train/update", func(c echo.Context) error {
 
@@ -72,9 +70,13 @@ func (hs *HipServer) setupRoutes() {
 
 		// read in request
 		update := new(DatasetUpdate)
-		if err = c.Bind(update); err != nil {
-			return c.String(http.StatusBadRequest, err.Error())
+		data := get_protobuf_binary(c.Request())
+		err = proto.Unmarshal(data, update)
+		if err != nil {
+			log.Fatalf("Unable to unmarshal update from request: %v", err)
 		}
+
+		DPrintf("Dataset update: %v", update)
 
 		// lock and update model
 		hs.mu.Lock()
@@ -94,26 +96,29 @@ func (hs *HipServer) setupRoutes() {
 	hs.es.POST("/model/testpattern", func(c echo.Context) error {
 
 		// read in request
-		tr := new(TestRequest)
-
-		if err := c.Bind(tr); err != nil {
-			return c.String(http.StatusBadRequest, err.Error())
+		test_request := new(TestItem)
+		data := get_protobuf_binary(c.Request())
+		err := proto.Unmarshal(data, test_request)
+		if err != nil {
+			log.Fatalf("Unable to unmarshal update from request: %v", err)
 		}
+
+		DPrintf("Test item data: %v", test_request)
 
 		// lock and test the item
 		hs.mu.Lock()
-		nameError, err := hs.sim.RestTestPattern(tr)
+		nameError, err := hs.sim.RestTestPattern(test_request)
 		hs.mu.Unlock()
 
 		// send response
 		if err == nil {
-			jsonNE, err2 := json.Marshal(nameError)
+			name_error_binary, err2 := proto.Marshal(nameError)
 
 			if err2 != nil {
-				DPrintf("JSON encoding error, %v", err2.Error())
+				DPrintf("proto marshaling error, %v", err2.Error())
 			}
+			return c.HTMLBlob(http.StatusOK, name_error_binary)
 
-			return c.String(http.StatusOK, string(jsonNE))
 		} else {
 			return c.String(http.StatusOK, err.Error())
 		}
