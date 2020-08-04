@@ -49,7 +49,7 @@ func (ss *Sim) OpenPatComma(dt *etable.Table, fname, name, desc string) error {
 // Finds the most similar vocabulary pattern to a provided activation set within a vocabulary
 func FindMostSimilarVocabPattern(pattern *etensor.Float32, vocab patgen.Vocab) *etensor.Float32 {
 
-	distance := math.MaxInt32
+	distance := math.MaxFloat64
 	var mostSimilar *etensor.Float32
 
 	// iterate through all vocab items, storing the one with the lowest distance from our pattern
@@ -68,7 +68,7 @@ func FindMostSimilarVocabPattern(pattern *etensor.Float32, vocab patgen.Vocab) *
 
 // Struct to store relevant parts of the name error
 type NameError struct {
-	Distance       int
+	Distance       float64
 	ClosestPattern *etensor.Float32
 }
 
@@ -76,19 +76,17 @@ type NameError struct {
 // Currently uses Hamming Distance
 // Tensors are float-types, so can't easily use XOR as one could on a bit array
 // On our size tensors, shouldn't matter -- if tensors get too big, also easily parallelizable
-func CalculateDistance(t1, t2 *etensor.Float32) int {
+func CalculateDistance(t1, t2 *etensor.Float32) float64 {
 
 	// would be better to throw an error here
 	if !SlicesAreEqual(t1.ShapeObj().Shp, t2.ShapeObj().Shp) {
 		panic("tensors don't have the same shape!")
 	}
 
-	distance := 0
+	distance := 0.0
 
 	for i := 0; i < t1.ShapeObj().Len(); i++ {
-		if math.Abs(math.Round(float64(t1.Value1D(i)))) != math.Abs(math.Round(float64(t2.Value1D(i)))) {
-			distance++
-		}
+		distance += math.Abs(float64(t1.Value1D(i) - t2.Value1D(i)))
 	}
 
 	return distance
@@ -106,7 +104,7 @@ func (ss *Sim) CalculateError(ecin *leabra.Layer, ecout *leabra.Layer) {
 
 	DPrintf("Outpattern:\n\n%v", outPattern)
 
-	distance := math.MaxInt32
+	distance := math.MaxFloat64
 	var mostSimilar *etensor.Float32
 
 	// find closest pattern in the training dataset to the output pattern

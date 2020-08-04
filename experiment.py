@@ -95,7 +95,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     for i in range(maxPatterns):
 
         # configure pattern
-        pat = np.ones(totalValues, dtype=int) 
+        pat = np.random.uniform(0, 1, totalValues)
         pat[:int(totalValues*sparsity)] = 0
         np.random.shuffle(pat)
         pat = np.reshape(pat, tuple(shape))

@@ -39,7 +39,6 @@ func isin(m map[rune]struct{}, r rune) bool {
 // not sure what the standard JSON format for an n-d array is yet though, will probably use whatever
 // the standard dump format for a numpy array is
 func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float32) {
-
 	DPrintf("shapeJSON: %v\n\npatternJSON: %v\n\n", shapeJSON, patternJSON)
 
 	// parse the shape of the tensor and create it
@@ -74,6 +73,8 @@ func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float3
 	decreaseD[']'] = struct{}{}
 	decreaseD[')'] = struct{}{}
 
+	var builder strings.Builder
+
 	for reader.Len() > 0 {
 		if r, _, err := reader.ReadRune(); err == nil {
 			switch {
@@ -83,14 +84,29 @@ func ParseTensorFromJSON(shapeJSON, patternJSON string) (pattern *etensor.Float3
 				currentD -= 1
 			case unicode.IsDigit(r):
 				//				fmt.Printf("writeCoor: %v\n", writeCoor)
-				pattern.Set(writeCoor, float32(r-'0')) // copy to tensor
-				writeCoor[currentD] += 1               // increment writing head
+				builder.Reset()
+				builder.WriteRune(r)
 
-				// only accepting binary input currently
-				if float32(r-'0') != 1.0 && float32(r-'0') != 0.0 {
-					DPrintf("expected 0 or 1, got %v\n", float32(r-'0'))
-					panic("Number not 0 or 1 in input")
+				for reader.Len() > 0 {
+					if r, _, err := reader.ReadRune(); err == nil {
+						if unicode.IsDigit(r) || r == '.' {
+							DPrintf("writing: %v", r)
+							builder.WriteRune(r)
+						} else {
+							reader.UnreadRune()
+							break
+						}
+					}
 				}
+
+				floatVal, err := strconv.ParseFloat(builder.String(), 32)
+				if err == nil {
+					pattern.Set(writeCoor, float32(floatVal)) // copy to tensor
+					DPrintf("parsed value to tensor: %v", float32(floatVal))
+				} else {
+					DPrintf("Error parsing string to float: %v", builder.String())
+				}
+				writeCoor[currentD] += 1 // increment writing head
 			}
 		}
 	}

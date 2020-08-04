@@ -185,7 +185,7 @@ if TEST_TESTITEM:
     bitstring = '0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0'
     bitlist = bitstring.split(",") # convert to list
     bitlist = [int(x) for x in bitlist] # convert to ints
-    arr = np.asarray(bitlist, dtype="int") # convert to numpy array
+    arr = np.asarray(bitlist, dtype="float") # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
     response, success = tti_hipapi.TestPattern(arr, arr)
