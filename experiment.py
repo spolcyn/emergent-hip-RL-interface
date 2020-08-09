@@ -28,7 +28,6 @@ def CorruptPattern(pattern, ratio):
         Numpy array: A copy of the original pattern, corrupted the prescribed amount.
     """
 
-
     # calc number of units
     shape = list(pattern.shape)
     assert len(shape) == 4 # ensure its a 4-d array
@@ -95,7 +94,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     for i in range(maxPatterns):
 
         # configure pattern
-        pat = np.random.uniform(0, 1, totalValues)
+        pat = np.ones(totalValues)
         pat[:int(totalValues*sparsity)] = 0
         np.random.shuffle(pat)
         pat = np.reshape(pat, tuple(shape))
