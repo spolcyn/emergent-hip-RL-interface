@@ -18,7 +18,7 @@ jobs:
       run: sudo apt-get install libgl1-mesa-dev xorg-dev
    
     - name: Setup protobuf
-      run:
+      run: |
         pip install protobuf
         sudo apt-get install libprotobuf-dev protobuf-compiler golang-goprotobuf-dev -y
 
