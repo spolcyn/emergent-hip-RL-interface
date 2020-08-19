@@ -14,12 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     
-    - name: Install Dependencies
+    - name: Install GUI Dependencies
       run: sudo apt-get install libgl1-mesa-dev xorg-dev
    
-    - name: Setup protobuf
+    - name: Install Protobuf Dependencies
       run: |
-        pip install protobuf
         sudo apt-get install libprotobuf-dev protobuf-compiler golang-goprotobuf-dev -y
 
     - name: Set up Go 1.x
