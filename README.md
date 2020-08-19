@@ -14,7 +14,7 @@ It accepts requests, takes the appropriate actions on the hippocampus model it c
 This also makes it possible to interact with the model on a remote server, or to easily spin up several models on a local machine to parallelize across models. 
 Additionally, a Python interface for the HTTP API is in `api.py` for easier Python development.
 
-[More information about the high-level design is available in the paper, which can be found in docs/paper.pdf](docs/paper.pdf)
+<!-- [More information about the high-level design is available in the paper, which can be found in docs/paper.pdf](docs/paper.pdf) -->
 
 Generally, the API has 3 basic functions, with a 4th made up of a composition of the basic 3:
 1. **Update Training Patterns** This operation accepts a set of patterns, encoded as a list of n-dimensional arrays and sets the model's training set to them.
