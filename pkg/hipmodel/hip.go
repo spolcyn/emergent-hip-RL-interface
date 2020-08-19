@@ -266,7 +266,7 @@ type Sim struct {
 
 	// HIP RL Interface: Stores the custom error data for later reading by the HTTP API
 	NameErrorResult *NameError
-	LastEpcTime  time.Time        `view:"-" desc:"timer for last epoch"`
+	LastEpcTime     time.Time `view:"-" desc:"timer for last epoch"`
 }
 
 // this registers this Sim Type and gives it properties that e.g.,
@@ -724,10 +724,13 @@ func (ss *Sim) MemStats(train bool) {
 	cmpN := 0.0           // completion target
 	trgOnN := 0.0
 	trgOffN := 0.0
+	actMi, _ := ecout.UnitVarIdx("ActM")
+	targi, _ := ecout.UnitVarIdx("Targ")
+	actQ1i, _ := ecout.UnitVarIdx("ActQ1")
 	for ni := 0; ni < nn; ni++ {
-		actm := ecout.UnitVal1D("ActM", ni)
-		trg := ecout.UnitVal1D("Targ", ni) // full pattern target
-		inact := ecin.UnitVal1D("ActQ1", ni)
+		actm := ecout.UnitVal1D(actMi, ni)
+		trg := ecout.UnitVal1D(targi, ni) // full pattern target
+		inact := ecin.UnitVal1D(actQ1i, ni)
 		if trg < 0.5 { // trgOff
 			trgOffN += 1
 			if actm > 0.5 {
@@ -1028,7 +1031,7 @@ func (ss *Sim) OpenPats() {
 	// patgen.ReshapeCppFile(ss.TestAB, "Test_AB.dat", "TestAB.dat")
 	// patgen.ReshapeCppFile(ss.TestAC, "Test_AC.dat", "TestAC.dat")
 	// patgen.ReshapeCppFile(ss.TestLure, "Lure.dat", "TestLure.dat")
-	/* HIP RL Interface: We don't load any patterns in at startup, all patterns should come form the API.
+	/* HIP RL Interface: We don't load any patterns in at startup, all patterns should come from the API.
 	ss.OpenPat(ss.TrainAB, "datasets/original/train_ab.tsv", "TrainAB", "AB Training Patterns")
 	ss.OpenPat(ss.TestAB, "datasets/original/test_ab.tsv", "TestAB", "AB Testing Patterns")
 
@@ -1070,7 +1073,7 @@ func (ss *Sim) WeightsFileName() string {
 
 // LogFileName returns default log file name
 func (ss *Sim) LogFileName(lognm string) string {
-	return ss.Net.Nm + "_" + ss.RunName() + "_" + lognm + ".csv"
+	return ss.Net.Nm + "_" + ss.RunName() + "_" + lognm + ".tsv"
 }
 
 //////////////////////////////////////////////
@@ -1938,6 +1941,7 @@ func (ss *Sim) CmdArgs() {
 	flag.StringVar(&ss.Tag, "tag", "", "extra tag to add to file names saved from this run")
 	flag.StringVar(&note, "note", "", "user note -- describe the run params etc")
 	flag.IntVar(&ss.MaxRuns, "runs", 10, "number of runs to do (note that MaxEpcs is in paramset)")
+	flag.IntVar(&ss.MaxEpcs, "epcs", 30, "maximum number of epochs to run (split between AB / AC)")
 	flag.BoolVar(&ss.LogSetParams, "setparams", false, "if true, print a record of each parameter that is set")
 	flag.BoolVar(&ss.SaveWts, "wts", false, "if true, save final weights after each run")
 	flag.BoolVar(&saveEpcLog, "epclog", true, "if true, save train epoch log to file")
