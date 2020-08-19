@@ -50,5 +50,8 @@ jobs:
     - name: Launch Server
       run: ./model.exe nogui &
     
+    - name: Shorten Experiment
+      run: sed -i .bu 's/^maxPatterns = 20$/maxPatterns = 10/g' experiment.py
+
     - name: Run Experiment
       run: python experiment.py
