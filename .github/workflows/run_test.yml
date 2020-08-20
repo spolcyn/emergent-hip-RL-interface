@@ -1,4 +1,4 @@
-name: Go
+name: Run model test
 
 on:
   push:
@@ -50,12 +50,8 @@ jobs:
     - name: Launch Server
       run: ./model.exe nogui &
     
-    - name: Shorten Experiment
+    - name: Shorten and Run Experiment 
       run: |
-        cd python
+        cd pyhip
         sed -i.bak 's/^maxPatterns = 20$/maxPatterns = 10/g' experiment.py
-
-    - name: Run Experiment
-      run: |
-        cd experiment.py
         python experiment.py
