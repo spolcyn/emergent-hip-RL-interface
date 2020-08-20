@@ -89,10 +89,7 @@ func (ss *Sim) RestTestPattern(tr *TestItem) (*NameError, error) {
 	corrupted_tensor := etensor.NewFloat32(convert_slice_to_int(tr.CorruptedPattern.Dimensions), nil, nil)
 	corrupted_tensor.SetFloats(tr.CorruptedPattern.Data)
 
-	target_tensor := etensor.NewFloat32(convert_slice_to_int(tr.TargetPattern.Dimensions), nil, nil)
-	target_tensor.SetFloats(tr.TargetPattern.Data)
-
-	ss.UpdateTestEnvWithTestPatterns(corrupted_tensor, target_tensor)
+	ss.UpdateTestEnvWithTestPattern(corrupted_tensor)
 
 	ss.TestItem(0) // always use 0, that's where we'll put the item
 	ss.IsRunning = false

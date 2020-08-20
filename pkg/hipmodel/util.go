@@ -39,3 +39,12 @@ func convert_slice_to_float64(old_slice []float32) []float64 {
 
 	return float64_slice
 }
+
+func convert_slice_to_uint32(old_slice []int) []uint32 {
+	uint32_slice := make([]uint32, len(old_slice))
+	for idx, val := range old_slice {
+		uint32_slice[idx] = uint32(val)
+	}
+
+	return uint32_slice
+}

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.8.1" />
-<title>iwhipmodel.api API documentation</title>
+<title>pyhip.api API documentation</title>
 <meta name="description" content="" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
@@ -17,23 +17,33 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>iwhipmodel.api</code></h1>
+<h1 class="title">Module <code>pyhip.api</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python"># api.py
-# Author: Stephen Polcyn
+<pre><code class="python"># Copyright (c) 2020, Stephen Polcyn. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# api.py
 # Provides the Python API for interacting with the hippocampus model
 
-import requests
 import time
 import random
-import numpy as np
 import json
 import logging
+
+import requests
+import numpy as np
+
+import hip_util
+
+import tensor_pb2
+import dataset_update_pb2
+import test_item_pb2
 
 # basic default parameters for the model server
 SERVER_URL=&#34;http://localhost&#34;
@@ -59,9 +69,9 @@ class HipAPI:
 
         return SERVER_URL + &#34;:&#34; + PORT + api_endpoint
 
-    def MakeRequest(self, verb, url, data):
+    def MakeRequest(self, verb, url, data, headers=None):
         &#34;&#34;&#34;
-        Send an HTTP request using the provided parameters and format response into desired tuple. 
+        Send an HTTP request using the provided parameters and format response into desired tuple.
 
         Args:
            verb (string): The HTTP verb to use (e.g., GET, POST, PUT)
@@ -72,7 +82,7 @@ class HipAPI:
             (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
         &#34;&#34;&#34;
 
-        response = requests.request(verb, url=url, data=data)
+        response = requests.request(verb, url=url, data=data, headers=headers)
 
         return response, response.ok
 
@@ -105,39 +115,46 @@ class HipAPI:
 
         api_endpoint = &#34;/dataset/train/update&#34;
 
-        # Format the list of numpy arrays into a format parseable by the backend
-        # Without replacing square brackets with parantheses, the JSON parser sometimes
-        #   parses each subarray to an individual array, instead of leaving it as the
-        #   representation of an n-d array
-        jsonpats = [json.dumps(np.ndarray.tolist(p)) for p in patterns]
-        jsonpats = [p.replace(&#39;[&#39;, &#39;(&#39;) for p in jsonpats]
-        jsonpats = [p.replace(&#39;]&#39;, &#39;)&#39;) for p in jsonpats]
+        dataset = hip_util.make_tensor_from_numpy(np.asarray(patterns))
 
-        data = {&#34;source&#34;:&#34;body&#34;, &#34;patterns&#34;:jsonpats, &#34;shape&#34;: json.dumps(patterns[0].shape)}
+        update = dataset_update_pb2.DatasetUpdate()
+        update.version = 1
+        update.source = &#34;body&#34;
+        update.dataset.CopyFrom(dataset)
 
-        return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)
+        data = update.SerializeToString()
 
-    def TestPattern(self, corruptedPattern, targetPattern):
+        return self.MakeRequest(&#39;PUT&#39;,
+                                self.MakeURLString(api_endpoint),
+                                data,
+                                headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})
+
+    def TestPattern(self, corrupted_pattern):
         &#34;&#34;&#34;
-        Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.
+        Pattern complete in the model from a corrupted pattern.
 
         Args:
-            corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
-            targetPattern (4-D Numpy integer array): Complete original pattern with no data removed. 
+            corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.
 
-        Returns: 
-            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
-            1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
-            2) The Hamming distance between the recalled pattern and the target pattern.
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request,
+                and a bool indicating whether an error was returned by the
+                server. The body contains the serialized TestItem protobuf.
         &#34;&#34;&#34;
 
         api_endpoint = &#34;/model/testpattern&#34;
 
-        assert corruptedPattern.shape == targetPattern.shape
+        test_item = test_item_pb2.TestItem()
+        test_item.version = 2
+        test_item.corrupted_pattern.CopyFrom(
+                hip_util.make_tensor_from_numpy(corrupted_pattern))
 
-        d = {&#39;shape&#39;: json.dumps(corruptedPattern.shape), &#39;corruptedPattern&#39;: json.dumps(np.ndarray.tolist(corruptedPattern)), &#39;targetPattern&#39;:json.dumps(np.ndarray.tolist(targetPattern))}
+        data = test_item.SerializeToString()
 
-        return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), d)
+        return self.MakeRequest(&#39;POST&#39;,
+                                 self.MakeURLString(api_endpoint),
+                                 data,
+                                 headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})
 
     def StartTraining(self, maxruns = 1, maxepcs = 50):
         &#34;&#34;&#34;
@@ -164,8 +181,8 @@ class HipAPI:
 
     def Step(self, cues, targets, iterations):
         &#34;&#34;&#34;
-        Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;. 
-        Generally, this method should be re-implemented for an RL environment using the basic API methods. 
+        Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;.
+        Generally, this method should be re-implemented for an RL environment using the basic API methods.
         This method can serve as a useful template for creating such methods.
 
         Args:
@@ -208,7 +225,7 @@ if TEST_TESTITEM:
     bitstring = &#39;0,0,0,1,0,0,1,0,1,0,0,0,0,0,0,1,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0,1,0,0,0,1,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,0,0,1,0&#39;
     bitlist = bitstring.split(&#34;,&#34;) # convert to list
     bitlist = [int(x) for x in bitlist] # convert to ints
-    arr = np.asarray(bitlist, dtype=&#34;int&#34;) # convert to numpy array
+    arr = np.asarray(bitlist, dtype=&#34;float&#34;) # convert to numpy array
     arr = np.reshape(arr, (6,2,3,4)) # reshape it to be the correct tensor shape
 
     response, success = tti_hipapi.TestPattern(arr, arr)
@@ -248,7 +265,7 @@ if TEST_UTP:
 <section>
 <h2 class="section-title" id="header-classes">Classes</h2>
 <dl>
-<dt id="iwhipmodel.api.HipAPI"><code class="flex name class">
+<dt id="pyhip.api.HipAPI"><code class="flex name class">
 <span>class <span class="ident">HipAPI</span></span>
 </code></dt>
 <dd>
@@ -277,9 +294,9 @@ if TEST_UTP:
 
         return SERVER_URL + &#34;:&#34; + PORT + api_endpoint
 
-    def MakeRequest(self, verb, url, data):
+    def MakeRequest(self, verb, url, data, headers=None):
         &#34;&#34;&#34;
-        Send an HTTP request using the provided parameters and format response into desired tuple. 
+        Send an HTTP request using the provided parameters and format response into desired tuple.
 
         Args:
            verb (string): The HTTP verb to use (e.g., GET, POST, PUT)
@@ -290,7 +307,7 @@ if TEST_UTP:
             (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
         &#34;&#34;&#34;
 
-        response = requests.request(verb, url=url, data=data)
+        response = requests.request(verb, url=url, data=data, headers=headers)
 
         return response, response.ok
 
@@ -323,39 +340,46 @@ if TEST_UTP:
 
         api_endpoint = &#34;/dataset/train/update&#34;
 
-        # Format the list of numpy arrays into a format parseable by the backend
-        # Without replacing square brackets with parantheses, the JSON parser sometimes
-        #   parses each subarray to an individual array, instead of leaving it as the
-        #   representation of an n-d array
-        jsonpats = [json.dumps(np.ndarray.tolist(p)) for p in patterns]
-        jsonpats = [p.replace(&#39;[&#39;, &#39;(&#39;) for p in jsonpats]
-        jsonpats = [p.replace(&#39;]&#39;, &#39;)&#39;) for p in jsonpats]
+        dataset = hip_util.make_tensor_from_numpy(np.asarray(patterns))
 
-        data = {&#34;source&#34;:&#34;body&#34;, &#34;patterns&#34;:jsonpats, &#34;shape&#34;: json.dumps(patterns[0].shape)}
+        update = dataset_update_pb2.DatasetUpdate()
+        update.version = 1
+        update.source = &#34;body&#34;
+        update.dataset.CopyFrom(dataset)
 
-        return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)
+        data = update.SerializeToString()
 
-    def TestPattern(self, corruptedPattern, targetPattern):
+        return self.MakeRequest(&#39;PUT&#39;,
+                                self.MakeURLString(api_endpoint),
+                                data,
+                                headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})
+
+    def TestPattern(self, corrupted_pattern):
         &#34;&#34;&#34;
-        Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.
+        Pattern complete in the model from a corrupted pattern.
 
         Args:
-            corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
-            targetPattern (4-D Numpy integer array): Complete original pattern with no data removed. 
+            corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.
 
-        Returns: 
-            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
-            1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
-            2) The Hamming distance between the recalled pattern and the target pattern.
+        Returns:
+            (requests.Response, bool): The full response to the HTTP request,
+                and a bool indicating whether an error was returned by the
+                server. The body contains the serialized TestItem protobuf.
         &#34;&#34;&#34;
 
         api_endpoint = &#34;/model/testpattern&#34;
 
-        assert corruptedPattern.shape == targetPattern.shape
+        test_item = test_item_pb2.TestItem()
+        test_item.version = 2
+        test_item.corrupted_pattern.CopyFrom(
+                hip_util.make_tensor_from_numpy(corrupted_pattern))
 
-        d = {&#39;shape&#39;: json.dumps(corruptedPattern.shape), &#39;corruptedPattern&#39;: json.dumps(np.ndarray.tolist(corruptedPattern)), &#39;targetPattern&#39;:json.dumps(np.ndarray.tolist(targetPattern))}
+        data = test_item.SerializeToString()
 
-        return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), d)
+        return self.MakeRequest(&#39;POST&#39;,
+                                 self.MakeURLString(api_endpoint),
+                                 data,
+                                 headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})
 
     def StartTraining(self, maxruns = 1, maxepcs = 50):
         &#34;&#34;&#34;
@@ -382,8 +406,8 @@ if TEST_UTP:
 
     def Step(self, cues, targets, iterations):
         &#34;&#34;&#34;
-        Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;. 
-        Generally, this method should be re-implemented for an RL environment using the basic API methods. 
+        Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;.
+        Generally, this method should be re-implemented for an RL environment using the basic API methods.
         This method can serve as a useful template for creating such methods.
 
         Args:
@@ -408,11 +432,11 @@ if TEST_UTP:
 </details>
 <h3>Methods</h3>
 <dl>
-<dt id="iwhipmodel.api.HipAPI.MakeRequest"><code class="name flex">
-<span>def <span class="ident">MakeRequest</span></span>(<span>self, verb, url, data)</span>
+<dt id="pyhip.api.HipAPI.MakeRequest"><code class="name flex">
+<span>def <span class="ident">MakeRequest</span></span>(<span>self, verb, url, data, headers=None)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Send an HTTP request using the provided parameters and format response into desired tuple. </p>
+<div class="desc"><p>Send an HTTP request using the provided parameters and format response into desired tuple.</p>
 <h2 id="args">Args</h2>
 <dl>
 <dt><strong><code>verb</code></strong> :&ensp;<code>string</code></dt>
@@ -428,9 +452,9 @@ if TEST_UTP:
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def MakeRequest(self, verb, url, data):
+<pre><code class="python">def MakeRequest(self, verb, url, data, headers=None):
     &#34;&#34;&#34;
-    Send an HTTP request using the provided parameters and format response into desired tuple. 
+    Send an HTTP request using the provided parameters and format response into desired tuple.
 
     Args:
        verb (string): The HTTP verb to use (e.g., GET, POST, PUT)
@@ -441,12 +465,12 @@ if TEST_UTP:
         (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server.
     &#34;&#34;&#34;
 
-    response = requests.request(verb, url=url, data=data)
+    response = requests.request(verb, url=url, data=data, headers=headers)
 
     return response, response.ok</code></pre>
 </details>
 </dd>
-<dt id="iwhipmodel.api.HipAPI.MakeURLString"><code class="name flex">
+<dt id="pyhip.api.HipAPI.MakeURLString"><code class="name flex">
 <span>def <span class="ident">MakeURLString</span></span>(<span>self, api_endpoint)</span>
 </code></dt>
 <dd>
@@ -479,7 +503,7 @@ if TEST_UTP:
     return SERVER_URL + &#34;:&#34; + PORT + api_endpoint</code></pre>
 </details>
 </dd>
-<dt id="iwhipmodel.api.HipAPI.StartTraining"><code class="name flex">
+<dt id="pyhip.api.HipAPI.StartTraining"><code class="name flex">
 <span>def <span class="ident">StartTraining</span></span>(<span>self, maxruns=1, maxepcs=50)</span>
 </code></dt>
 <dd>
@@ -525,7 +549,7 @@ if TEST_UTP:
     return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), parameters)</code></pre>
 </details>
 </dd>
-<dt id="iwhipmodel.api.HipAPI.Step"><code class="name flex">
+<dt id="pyhip.api.HipAPI.Step"><code class="name flex">
 <span>def <span class="ident">Step</span></span>(<span>self, cues, targets, iterations)</span>
 </code></dt>
 <dd>
@@ -550,8 +574,8 @@ This method can serve as a useful template for creating such methods.</p>
 </summary>
 <pre><code class="python">def Step(self, cues, targets, iterations):
     &#34;&#34;&#34;
-    Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;. 
-    Generally, this method should be re-implemented for an RL environment using the basic API methods. 
+    Steps the model forward one cycle. Similar to OpenAI gym&#39;s RL setup. Model must be trained prior to calling &#34;step&#34;.
+    Generally, this method should be re-implemented for an RL environment using the basic API methods.
     This method can serve as a useful template for creating such methods.
 
     Args:
@@ -575,48 +599,50 @@ This method can serve as a useful template for creating such methods.</p>
     return np.mean(rewards)</code></pre>
 </details>
 </dd>
-<dt id="iwhipmodel.api.HipAPI.TestPattern"><code class="name flex">
-<span>def <span class="ident">TestPattern</span></span>(<span>self, corruptedPattern, targetPattern)</span>
+<dt id="pyhip.api.HipAPI.TestPattern"><code class="name flex">
+<span>def <span class="ident">TestPattern</span></span>(<span>self, corrupted_pattern)</span>
 </code></dt>
 <dd>
-<div class="desc"><p>Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.</p>
+<div class="desc"><p>Pattern complete in the model from a corrupted pattern.</p>
 <h2 id="args">Args</h2>
-<dl>
-<dt>corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.</dt>
-<dt>targetPattern (4-D Numpy integer array): Complete original pattern with no data removed.</dt>
-<dt><strong><code>Returns</code></strong></dt>
-<dd>(requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
-1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
-2) The Hamming distance between the recalled pattern and the target pattern.</dd>
-</dl></div>
+<p>corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.</p>
+<h2 id="returns">Returns</h2>
+<p>(requests.Response, bool): The full response to the HTTP request,
+and a bool indicating whether an error was returned by the
+server. The body contains the serialized TestItem protobuf.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def TestPattern(self, corruptedPattern, targetPattern):
+<pre><code class="python">def TestPattern(self, corrupted_pattern):
     &#34;&#34;&#34;
-    Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.
+    Pattern complete in the model from a corrupted pattern.
 
     Args:
-        corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
-        targetPattern (4-D Numpy integer array): Complete original pattern with no data removed. 
+        corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.
 
-    Returns: 
-        (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
-        1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
-        2) The Hamming distance between the recalled pattern and the target pattern.
+    Returns:
+        (requests.Response, bool): The full response to the HTTP request,
+            and a bool indicating whether an error was returned by the
+            server. The body contains the serialized TestItem protobuf.
     &#34;&#34;&#34;
 
     api_endpoint = &#34;/model/testpattern&#34;
 
-    assert corruptedPattern.shape == targetPattern.shape
+    test_item = test_item_pb2.TestItem()
+    test_item.version = 2
+    test_item.corrupted_pattern.CopyFrom(
+            hip_util.make_tensor_from_numpy(corrupted_pattern))
 
-    d = {&#39;shape&#39;: json.dumps(corruptedPattern.shape), &#39;corruptedPattern&#39;: json.dumps(np.ndarray.tolist(corruptedPattern)), &#39;targetPattern&#39;:json.dumps(np.ndarray.tolist(targetPattern))}
+    data = test_item.SerializeToString()
 
-    return self.MakeRequest(&#39;POST&#39;, self.MakeURLString(api_endpoint), d)</code></pre>
+    return self.MakeRequest(&#39;POST&#39;,
+                             self.MakeURLString(api_endpoint),
+                             data,
+                             headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})</code></pre>
 </details>
 </dd>
-<dt id="iwhipmodel.api.HipAPI.UpdateTrainingDataFile"><code class="name flex">
+<dt id="pyhip.api.HipAPI.UpdateTrainingDataFile"><code class="name flex">
 <span>def <span class="ident">UpdateTrainingDataFile</span></span>(<span>self, filename)</span>
 </code></dt>
 <dd>
@@ -649,7 +675,7 @@ This method can serve as a useful template for creating such methods.</p>
     return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)</code></pre>
 </details>
 </dd>
-<dt id="iwhipmodel.api.HipAPI.UpdateTrainingDataPatterns"><code class="name flex">
+<dt id="pyhip.api.HipAPI.UpdateTrainingDataPatterns"><code class="name flex">
 <span>def <span class="ident">UpdateTrainingDataPatterns</span></span>(<span>self, patterns)</span>
 </code></dt>
 <dd>
@@ -675,17 +701,19 @@ This method can serve as a useful template for creating such methods.</p>
 
     api_endpoint = &#34;/dataset/train/update&#34;
 
-    # Format the list of numpy arrays into a format parseable by the backend
-    # Without replacing square brackets with parantheses, the JSON parser sometimes
-    #   parses each subarray to an individual array, instead of leaving it as the
-    #   representation of an n-d array
-    jsonpats = [json.dumps(np.ndarray.tolist(p)) for p in patterns]
-    jsonpats = [p.replace(&#39;[&#39;, &#39;(&#39;) for p in jsonpats]
-    jsonpats = [p.replace(&#39;]&#39;, &#39;)&#39;) for p in jsonpats]
+    dataset = hip_util.make_tensor_from_numpy(np.asarray(patterns))
 
-    data = {&#34;source&#34;:&#34;body&#34;, &#34;patterns&#34;:jsonpats, &#34;shape&#34;: json.dumps(patterns[0].shape)}
+    update = dataset_update_pb2.DatasetUpdate()
+    update.version = 1
+    update.source = &#34;body&#34;
+    update.dataset.CopyFrom(dataset)
 
-    return self.MakeRequest(&#39;PUT&#39;, self.MakeURLString(api_endpoint), data)</code></pre>
+    data = update.SerializeToString()
+
+    return self.MakeRequest(&#39;PUT&#39;,
+                            self.MakeURLString(api_endpoint),
+                            data,
+                            headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})</code></pre>
 </details>
 </dd>
 </dl>
@@ -701,21 +729,21 @@ This method can serve as a useful template for creating such methods.</p>
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="iwhipmodel" href="index.html">iwhipmodel</a></code></li>
+<li><code><a title="pyhip" href="index.html">pyhip</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-classes">Classes</a></h3>
 <ul>
 <li>
-<h4><code><a title="iwhipmodel.api.HipAPI" href="#iwhipmodel.api.HipAPI">HipAPI</a></code></h4>
+<h4><code><a title="pyhip.api.HipAPI" href="#pyhip.api.HipAPI">HipAPI</a></code></h4>
 <ul class="">
-<li><code><a title="iwhipmodel.api.HipAPI.MakeRequest" href="#iwhipmodel.api.HipAPI.MakeRequest">MakeRequest</a></code></li>
-<li><code><a title="iwhipmodel.api.HipAPI.MakeURLString" href="#iwhipmodel.api.HipAPI.MakeURLString">MakeURLString</a></code></li>
-<li><code><a title="iwhipmodel.api.HipAPI.StartTraining" href="#iwhipmodel.api.HipAPI.StartTraining">StartTraining</a></code></li>
-<li><code><a title="iwhipmodel.api.HipAPI.Step" href="#iwhipmodel.api.HipAPI.Step">Step</a></code></li>
-<li><code><a title="iwhipmodel.api.HipAPI.TestPattern" href="#iwhipmodel.api.HipAPI.TestPattern">TestPattern</a></code></li>
-<li><code><a title="iwhipmodel.api.HipAPI.UpdateTrainingDataFile" href="#iwhipmodel.api.HipAPI.UpdateTrainingDataFile">UpdateTrainingDataFile</a></code></li>
-<li><code><a title="iwhipmodel.api.HipAPI.UpdateTrainingDataPatterns" href="#iwhipmodel.api.HipAPI.UpdateTrainingDataPatterns">UpdateTrainingDataPatterns</a></code></li>
+<li><code><a title="pyhip.api.HipAPI.MakeRequest" href="#pyhip.api.HipAPI.MakeRequest">MakeRequest</a></code></li>
+<li><code><a title="pyhip.api.HipAPI.MakeURLString" href="#pyhip.api.HipAPI.MakeURLString">MakeURLString</a></code></li>
+<li><code><a title="pyhip.api.HipAPI.StartTraining" href="#pyhip.api.HipAPI.StartTraining">StartTraining</a></code></li>
+<li><code><a title="pyhip.api.HipAPI.Step" href="#pyhip.api.HipAPI.Step">Step</a></code></li>
+<li><code><a title="pyhip.api.HipAPI.TestPattern" href="#pyhip.api.HipAPI.TestPattern">TestPattern</a></code></li>
+<li><code><a title="pyhip.api.HipAPI.UpdateTrainingDataFile" href="#pyhip.api.HipAPI.UpdateTrainingDataFile">UpdateTrainingDataFile</a></code></li>
+<li><code><a title="pyhip.api.HipAPI.UpdateTrainingDataPatterns" href="#pyhip.api.HipAPI.UpdateTrainingDataPatterns">UpdateTrainingDataPatterns</a></code></li>
 </ul>
 </li>
 </ul>

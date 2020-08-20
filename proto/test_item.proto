@@ -7,7 +7,7 @@ import "tensor.proto";
 message TestItem {
   uint32 version = 1;
   hipmodel.Tensor corrupted_pattern = 2;
-  hipmodel.Tensor target_pattern = 3;
+  hipmodel.Tensor target_pattern = 3 [deprecated = true];
 }
 
 option go_package = "pkg/hipmodel";

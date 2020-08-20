@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1" />
 <meta name="generator" content="pdoc 0.8.1" />
-<title>iwhipmodel.experiment API documentation</title>
+<title>pyhip.experiment API documentation</title>
 <meta name="description" content="" />
 <link href='https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css' rel='stylesheet'>
 <link href='https://cdnjs.cloudflare.com/ajax/libs/10up-sanitize.css/8.0.0/sanitize.min.css' rel='stylesheet'>
@@ -17,24 +17,31 @@
 <main>
 <article id="content">
 <header>
-<h1 class="title">Module <code>iwhipmodel.experiment</code></h1>
+<h1 class="title">Module <code>pyhip.experiment</code></h1>
 </header>
 <section id="section-intro">
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python"># experiment.py
-# Author: Stephen Polcyn
+<pre><code class="python"># Copyright (c) 2020, Stephen Polcyn. All rights reserved.
+# Use of this source code is governed by a BSD-style
+# license that can be found in the LICENSE file.
+
+# experiment.py
 # Runs an experiment using the Emergent hippocampus Python API
 
-import numpy as np
-import api as hipapi
 import logging
 import time
+import sys
+
+import numpy as np
 from tqdm import tqdm
-import matplotlib.pyplot as plt
-from matplotlib import pyplot
+
+import api as hipapi
+import hip_util
+
+import NameError_pb2
 
 # create module logger
 logger = logging.getLogger(__name__)
@@ -50,7 +57,6 @@ def CorruptPattern(pattern, ratio):
     Returns:
         Numpy array: A copy of the original pattern, corrupted the prescribed amount.
     &#34;&#34;&#34;
-
 
     # calc number of units
     shape = list(pattern.shape)
@@ -92,7 +98,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
         corruptionRatios (Numpy array of floats): Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].
         sparsity (float): Percentage of neurons as a decimal that should be inactive in the generated patterns.
 
-    Returns: 
+    Returns:
         Numpy array: Array contains percentage of items correctly recalled for each trial size.
     &#34;&#34;&#34;
 
@@ -109,7 +115,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     patternlist = []
 
     # config pattern shape-related properties
-    shape = [6,2,3,4] 
+    shape = [6,2,3,4]
     totalValues = 1
     for v in shape:
         totalValues *= v
@@ -118,7 +124,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
     for i in range(maxPatterns):
 
         # configure pattern
-        pat = np.ones(totalValues, dtype=int) 
+        pat = np.ones(totalValues)
         pat[:int(totalValues*sparsity)] = 0
         np.random.shuffle(pat)
         pat = np.reshape(pat, tuple(shape))
@@ -139,7 +145,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
         currentData = patternlist[:minPatterns + step * c]
         logger.debug(&#34;CurrentData: %s&#34;, currentData)
 
-        # send new patterns 
+        # send new patterns
         response, success = ha.UpdateTrainingDataPatterns(currentData)
         if success:
             logger.debug(&#34;Successful: %s&#34;, response.text)
@@ -160,19 +166,49 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
                 # run all patterns within trial
                 successfulRecalls = 0
 
-                for idx, p in enumerate(currentData): 
+                for idx, p in enumerate(currentData):
+
+                    def get_closest_pattern(output_pattern):
+                        max_distance = sys.maxsize
+                        closest_pattern = None
+
+                        def calculate_distance(pattern1, pattern2):
+                            assert np.shape(pattern1) == np.shape(pattern2)
+                            distance = np.size(pattern1) \
+                                       - np.sum(np.isclose(pattern1, pattern2))
+                            logger.debug(&#34;Distance: &#34;, distance)
+                            return distance
+
+                        for candidate_pattern in currentData:
+                            distance = calculate_distance(candidate_pattern,
+                                                          output_pattern)
+                            if distance &lt; max_distance:
+                                max_distance = distance
+                                closest_pattern = candidate_pattern
+
+                        return closest_pattern
+
                     corrupted = CorruptPattern(p, r)
-                    response, success = ha.TestPattern(corrupted, p)
+                    response, success = ha.TestPattern(corrupted)
 
-                    closestPattern = response.json()[&#34;ClosestPattern&#34;][&#34;Values&#34;] # returned as list
-                    recallSuccessful = (closestPattern == p.reshape((totalValues)).tolist()) # test if the closest pattern is the same as the target
+                    test_output = NameError_pb2.NameError()
+                    test_output.ParseFromString(response.content)
 
+                    # process output pattern to numpy array
+                    output_pattern = np.asarray(test_output.output_pattern.data)
+                    output_pattern = output_pattern.reshape(
+                                     tuple(test_output.output_pattern.dimensions))
+                    np.rint(output_pattern)
+
+                    # test if the closest pattern is the same as the target
+                    closest_pattern = get_closest_pattern(output_pattern)
+                    recallSuccessful = (np.allclose(closest_pattern, p))
                     if recallSuccessful:
                         successfulRecalls += 1
 
-                    logger.debug(&#34;Closest pattern: %s&#34;, closestPattern)
-                    logger.debug(&#34;Input pattern: %s&#34;, p.reshape((totalValues)).tolist())
-                    logger.debug(&#34;Corrupted pattern: %s&#34;, corrupted.reshape((totalValues)).tolist())
+                    logger.debug(&#34;Closest pattern: %s&#34;, closest_pattern)
+                    logger.debug(&#34;Input pattern: %s&#34;, p)
+                    logger.debug(&#34;Corrupted pattern: %s&#34;, corrupted)
 
                 results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
 
@@ -183,30 +219,29 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
 
     return results
 
-&#34;&#34;&#34;
-# setup logging
-logging.basicConfig()
-logger.info(&#34;Starting&#34;)
+if __name__ == &#34;__main__&#34;:
+    # setup logging
+    logging.basicConfig()
+    logger.info(&#34;Starting&#34;)
 
-# setup parameters
-minPatterns = 2
-maxPatterns = 20
-step = 2
-corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
-sparsity = .75
+    # setup parameters
+    minPatterns = 2
+    maxPatterns = 20
+    step = 2
+    corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
+    sparsity = .75
 
-# time and run experiment
-start = time.monotonic()
-results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trainingEpochs=5, corruptionRatios=corruptionRatios, sparsity = .75)
-end = time.monotonic()
+    # time and run experiment
+    start = time.monotonic()
+    results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trainingEpochs=5, corruptionRatios=corruptionRatios, sparsity = .75)
+    end = time.monotonic()
 
-# report results
-print(&#34;Finished in&#34;, end - start, &#34;seconds&#34;)
-print(&#34;Results:&#34;, results)
+    # report results
+    print(&#34;Finished in&#34;, end - start, &#34;seconds&#34;)
+    print(&#34;Results:&#34;, results)
 
-# save results for use with plot.py
-np.save(&#34;results&#34;, results)
-&#34;&#34;&#34;</code></pre>
+    # save results for use with plot.py
+    np.save(&#34;results&#34;, results)</code></pre>
 </details>
 </section>
 <section>
@@ -216,7 +251,7 @@ np.save(&#34;results&#34;, results)
 <section>
 <h2 class="section-title" id="header-functions">Functions</h2>
 <dl>
-<dt id="iwhipmodel.experiment.CorruptPattern"><code class="name flex">
+<dt id="pyhip.experiment.CorruptPattern"><code class="name flex">
 <span>def <span class="ident">CorruptPattern</span></span>(<span>pattern, ratio)</span>
 </code></dt>
 <dd>
@@ -248,7 +283,6 @@ np.save(&#34;results&#34;, results)
         Numpy array: A copy of the original pattern, corrupted the prescribed amount.
     &#34;&#34;&#34;
 
-
     # calc number of units
     shape = list(pattern.shape)
     assert len(shape) == 4 # ensure its a 4-d array
@@ -277,7 +311,7 @@ np.save(&#34;results&#34;, results)
     return corrupted</code></pre>
 </details>
 </dd>
-<dt id="iwhipmodel.experiment.MemoryVsPatternCount"><code class="name flex">
+<dt id="pyhip.experiment.MemoryVsPatternCount"><code class="name flex">
 <span>def <span class="ident">MemoryVsPatternCount</span></span>(<span>minPatterns=10, maxPatterns=20, step=1, trials=10, trainingEpochs=50, corruptionRatios=[0.5], sparsity=0.75)</span>
 </code></dt>
 <dd>
@@ -298,8 +332,11 @@ np.save(&#34;results&#34;, results)
 <dd>Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].</dd>
 <dt><strong><code>sparsity</code></strong> :&ensp;<code>float</code></dt>
 <dd>Percentage of neurons as a decimal that should be inactive in the generated patterns.</dd>
-<dt><strong><code>Returns</code></strong></dt>
-<dd>Numpy array: Array contains percentage of items correctly recalled for each trial size.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Numpy array</code></dt>
+<dd>Array contains percentage of items correctly recalled for each trial size.</dd>
 </dl></div>
 <details class="source">
 <summary>
@@ -318,7 +355,7 @@ np.save(&#34;results&#34;, results)
         corruptionRatios (Numpy array of floats): Amount of the image to corrupt. 0 means no corruption, 1 means total deactivation of every neuron in the pattern. Values must be in [0, 1].
         sparsity (float): Percentage of neurons as a decimal that should be inactive in the generated patterns.
 
-    Returns: 
+    Returns:
         Numpy array: Array contains percentage of items correctly recalled for each trial size.
     &#34;&#34;&#34;
 
@@ -335,7 +372,7 @@ np.save(&#34;results&#34;, results)
     patternlist = []
 
     # config pattern shape-related properties
-    shape = [6,2,3,4] 
+    shape = [6,2,3,4]
     totalValues = 1
     for v in shape:
         totalValues *= v
@@ -344,7 +381,7 @@ np.save(&#34;results&#34;, results)
     for i in range(maxPatterns):
 
         # configure pattern
-        pat = np.ones(totalValues, dtype=int) 
+        pat = np.ones(totalValues)
         pat[:int(totalValues*sparsity)] = 0
         np.random.shuffle(pat)
         pat = np.reshape(pat, tuple(shape))
@@ -365,7 +402,7 @@ np.save(&#34;results&#34;, results)
         currentData = patternlist[:minPatterns + step * c]
         logger.debug(&#34;CurrentData: %s&#34;, currentData)
 
-        # send new patterns 
+        # send new patterns
         response, success = ha.UpdateTrainingDataPatterns(currentData)
         if success:
             logger.debug(&#34;Successful: %s&#34;, response.text)
@@ -386,19 +423,49 @@ np.save(&#34;results&#34;, results)
                 # run all patterns within trial
                 successfulRecalls = 0
 
-                for idx, p in enumerate(currentData): 
+                for idx, p in enumerate(currentData):
+
+                    def get_closest_pattern(output_pattern):
+                        max_distance = sys.maxsize
+                        closest_pattern = None
+
+                        def calculate_distance(pattern1, pattern2):
+                            assert np.shape(pattern1) == np.shape(pattern2)
+                            distance = np.size(pattern1) \
+                                       - np.sum(np.isclose(pattern1, pattern2))
+                            logger.debug(&#34;Distance: &#34;, distance)
+                            return distance
+
+                        for candidate_pattern in currentData:
+                            distance = calculate_distance(candidate_pattern,
+                                                          output_pattern)
+                            if distance &lt; max_distance:
+                                max_distance = distance
+                                closest_pattern = candidate_pattern
+
+                        return closest_pattern
+
                     corrupted = CorruptPattern(p, r)
-                    response, success = ha.TestPattern(corrupted, p)
+                    response, success = ha.TestPattern(corrupted)
 
-                    closestPattern = response.json()[&#34;ClosestPattern&#34;][&#34;Values&#34;] # returned as list
-                    recallSuccessful = (closestPattern == p.reshape((totalValues)).tolist()) # test if the closest pattern is the same as the target
+                    test_output = NameError_pb2.NameError()
+                    test_output.ParseFromString(response.content)
 
+                    # process output pattern to numpy array
+                    output_pattern = np.asarray(test_output.output_pattern.data)
+                    output_pattern = output_pattern.reshape(
+                                     tuple(test_output.output_pattern.dimensions))
+                    np.rint(output_pattern)
+
+                    # test if the closest pattern is the same as the target
+                    closest_pattern = get_closest_pattern(output_pattern)
+                    recallSuccessful = (np.allclose(closest_pattern, p))
                     if recallSuccessful:
                         successfulRecalls += 1
 
-                    logger.debug(&#34;Closest pattern: %s&#34;, closestPattern)
-                    logger.debug(&#34;Input pattern: %s&#34;, p.reshape((totalValues)).tolist())
-                    logger.debug(&#34;Corrupted pattern: %s&#34;, corrupted.reshape((totalValues)).tolist())
+                    logger.debug(&#34;Closest pattern: %s&#34;, closest_pattern)
+                    logger.debug(&#34;Input pattern: %s&#34;, p)
+                    logger.debug(&#34;Corrupted pattern: %s&#34;, corrupted)
 
                 results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
 
@@ -423,13 +490,13 @@ np.save(&#34;results&#34;, results)
 <ul id="index">
 <li><h3>Super-module</h3>
 <ul>
-<li><code><a title="iwhipmodel" href="index.html">iwhipmodel</a></code></li>
+<li><code><a title="pyhip" href="index.html">pyhip</a></code></li>
 </ul>
 </li>
 <li><h3><a href="#header-functions">Functions</a></h3>
 <ul class="">
-<li><code><a title="iwhipmodel.experiment.CorruptPattern" href="#iwhipmodel.experiment.CorruptPattern">CorruptPattern</a></code></li>
-<li><code><a title="iwhipmodel.experiment.MemoryVsPatternCount" href="#iwhipmodel.experiment.MemoryVsPatternCount">MemoryVsPatternCount</a></code></li>
+<li><code><a title="pyhip.experiment.CorruptPattern" href="#pyhip.experiment.CorruptPattern">CorruptPattern</a></code></li>
+<li><code><a title="pyhip.experiment.MemoryVsPatternCount" href="#pyhip.experiment.MemoryVsPatternCount">MemoryVsPatternCount</a></code></li>
 </ul>
 </li>
 </ul>

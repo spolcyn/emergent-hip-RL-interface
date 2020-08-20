@@ -51,7 +51,11 @@ jobs:
       run: ./model.exe nogui &
     
     - name: Shorten Experiment
-      run: sed -i.bak 's/^maxPatterns = 20$/maxPatterns = 10/g' experiment.py
+      run: |
+        cd python
+        sed -i.bak 's/^maxPatterns = 20$/maxPatterns = 10/g' experiment.py
 
     - name: Run Experiment
-      run: python experiment.py
+      run: |
+        cd experiment.py
+        python experiment.py
