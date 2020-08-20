@@ -103,30 +103,25 @@ class HipAPI:
                                 data,
                                 headers={'Content-Type':'application/octet-stream'})
 
-    def TestPattern(self, corruptedPattern, targetPattern):
+    def TestPattern(self, corrupted_pattern):
         """
-        Tests a pattern in the model. Patterns must both be the same shape as each other and as the input layer of the hippocampus model.
+        Pattern complete in the model from a corrupted pattern.
 
         Args:
-            corruptedPattern (4-D Numpy integer array): Original pattern corrupted in some way.
-            targetPattern (4-D Numpy integer array): Complete original pattern with no data removed.
+            corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.
 
         Returns:
-            (requests.Response, bool): The full response to the HTTP request, and a bool indicating whether an error was returned by the server. In particular, the response contains (in JSON format):
-            1) The pattern (with all Emergent etensor properties, including shape, stride, dimension names, and actual pattern values) to which the recalled pattern is most similar
-            2) The Hamming distance between the recalled pattern and the target pattern.
+            (requests.Response, bool): The full response to the HTTP request,
+                and a bool indicating whether an error was returned by the
+                server. The body contains the serialized TestItem protobuf.
         """
 
         api_endpoint = "/model/testpattern"
 
-        assert corruptedPattern.shape == targetPattern.shape
-
         test_item = test_item_pb2.TestItem()
-        test_item.version = 1
+        test_item.version = 2
         test_item.corrupted_pattern.CopyFrom(
-                hip_util.make_tensor_from_numpy(corruptedPattern))
-        test_item.target_pattern.CopyFrom(
-                hip_util.make_tensor_from_numpy(targetPattern))
+                hip_util.make_tensor_from_numpy(corrupted_pattern))
 
         data = test_item.SerializeToString()
 

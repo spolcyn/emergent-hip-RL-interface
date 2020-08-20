@@ -714,7 +714,7 @@ func (ss *Sim) MemStats(train bool) {
 
 	// HIP RL Interface: Calculates error using a custom metric and stores it in the Sim struct for later retrieval by the HTTP server
 	if !train {
-		ss.CalculateError(ecin, ecout)
+		ss.get_final_ecout_activations(ecout)
 	}
 
 	nn := ecout.Shape().Len()

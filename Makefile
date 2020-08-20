@@ -6,12 +6,13 @@ BINARY_NAME=model.exe
 
 PROTO_SRC_DIR=proto
 GO_MODEL_DIR=pkg/hipmodel
+PYTHON_DIR=pyhip
 ALL_PROTO_FILES=$(wildcard $(PROTO_SRC_DIR)/*.proto)
 ALL_GO_MODEL_FILES=$(wildcard $(GO_MODEL_DIR)/*.go)
 
 PROTO_NO_PATH=$(subst $(PROTO_SRC_DIR)/,,$(ALL_PROTO_FILES))
-ALL_PY_PROTO=$(patsubst %.proto,%_pb2.py,$(PROTO_NO_PATH))
-ALL_GO_PROTO=$(addprefix $(GO_MODEL_DIR)/,$(patsubst %.proto, %.pb.go, $(PROTO_NO_PATH)))
+ALL_PY_PROTO=$(addprefix $(PYTHON_DIR)/,$(patsubst %.proto,%_pb2.py,$(PROTO_NO_PATH)))
+ALL_GO_PROTO=$(addprefix $(GO_MODEL_DIR)/,$(patsubst %.proto,%.pb.go,$(PROTO_NO_PATH)))
 
 all: $(BINARY_NAME)
 
@@ -21,7 +22,7 @@ $(BINARY_NAME): proto cmd/iwhipmodel/main.go $(ALL_GO_MODEL_FILES)
 proto: $(ALL_PY_PROTO) $(ALL_GO_PROTO)
 
 $(ALL_PY_PROTO): $(ALL_PROTO_FILES)
-	protoc -I=$(PROTO_SRC_DIR) --python_out=./ $(ALL_PROTO_FILES)
+	protoc -I=$(PROTO_SRC_DIR) --python_out=$(PYTHON_DIR) $(ALL_PROTO_FILES)
 
 $(ALL_GO_PROTO): $(ALL_PROTO_FILES)
 	protoc -I=$(PROTO_SRC_DIR) --go_out=./ $(ALL_PROTO_FILES)
@@ -31,6 +32,10 @@ $(ALL_GO_PROTO): $(ALL_PROTO_FILES)
 # technically, using any command-line argument works
 run: $(BINARY_NAME)
 	./$(BINARY_NAME) nogui
+
+.PHONY: docs
+docs:
+	cd $(PYTHON_DIR) && pdoc3 --html ./ --output-dir ../docs --force
 
 clean: 
 	rm -f $(BINARY_NAME) $(ALL_GO_PROTO) $(ALL_PY_PROTO)

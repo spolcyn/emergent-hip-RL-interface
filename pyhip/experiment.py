@@ -7,6 +7,7 @@
 
 import logging
 import time
+import sys
 
 import numpy as np
 from tqdm import tqdm
@@ -140,20 +141,47 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
                 successfulRecalls = 0
 
                 for idx, p in enumerate(currentData):
-                    corrupted = CorruptPattern(p, r)
-                    response, success = ha.TestPattern(corrupted, p)
 
-                    name_error_result = NameError_pb2.NameError()
-                    name_error_result.ParseFromString(response.content)
-                    closest_pattern = np.asarray(name_error_result.closest_pattern.data)
-                    closest_pattern = closest_pattern.reshape(tuple(name_error_result.closest_pattern.dimensions))
+                    def get_closest_pattern(output_pattern):
+                        max_distance = sys.maxsize
+                        closest_pattern = None
+
+                        def calculate_distance(pattern1, pattern2):
+                            assert np.shape(pattern1) == np.shape(pattern2)
+                            distance = np.size(pattern1) \
+                                       - np.sum(np.isclose(pattern1, pattern2))
+                            logger.debug("Distance: ", distance)
+                            return distance
+
+                        for candidate_pattern in currentData:
+                            distance = calculate_distance(candidate_pattern,
+                                                          output_pattern)
+                            if distance < max_distance:
+                                max_distance = distance
+                                closest_pattern = candidate_pattern
+
+                        return closest_pattern
+
+                    corrupted = CorruptPattern(p, r)
+                    response, success = ha.TestPattern(corrupted)
+
+                    test_output = NameError_pb2.NameError()
+                    test_output.ParseFromString(response.content)
+
+                    # process output pattern to numpy array
+                    output_pattern = np.asarray(test_output.output_pattern.data)
+                    output_pattern = output_pattern.reshape(
+                                     tuple(test_output.output_pattern.dimensions))
+                    np.rint(output_pattern)
+
                     # test if the closest pattern is the same as the target
-                    recallSuccessful = (np.array_equal(closest_pattern, p))
+                    closest_pattern = get_closest_pattern(output_pattern)
+                    recallSuccessful = (np.allclose(closest_pattern, p))
                     if recallSuccessful:
                         successfulRecalls += 1
 
                     logger.debug("Closest pattern: %s", closest_pattern)
-                    logger.debug("Input pattern: %s", p)
+                    logger.debug("Target pattern: %s", p)
                     logger.debug("Corrupted pattern: %s", corrupted)
 
                 results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
@@ -165,25 +193,26 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
 
     return results
 
-# setup logging
-logging.basicConfig()
-logger.info("Starting")
+if __name__ == "__main__":
+    # setup logging
+    logging.basicConfig()
+    logger.info("Starting")
 
-# setup parameters
-minPatterns = 2
-maxPatterns = 20
-step = 2
-corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
-sparsity = .75
+    # setup parameters
+    minPatterns = 2
+    maxPatterns = 20
+    step = 2
+    corruptionRatios = np.linspace(0, 1, num=10, endpoint=False)
+    sparsity = .75
 
-# time and run experiment
-start = time.monotonic()
-results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trainingEpochs=5, corruptionRatios=corruptionRatios, sparsity = .75)
-end = time.monotonic()
+    # time and run experiment
+    start = time.monotonic()
+    results = MemoryVsPatternCount(minPatterns = minPatterns, maxPatterns = maxPatterns, step = step, trainingEpochs=5, corruptionRatios=corruptionRatios, sparsity = .75)
+    end = time.monotonic()
 
-# report results
-print("Finished in", end - start, "seconds")
-print("Results:", results)
+    # report results
+    print("Finished in", end - start, "seconds")
+    print("Results:", results)
 
-# save results for use with plot.py
-np.save("results", results)
+    # save results for use with plot.py
+    np.save("results", results)

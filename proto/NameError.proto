@@ -6,8 +6,8 @@ import "tensor.proto";
 
 message NameError {
   uint32 version = 1;
-  float distance = 2;
-  hipmodel.Tensor closest_pattern = 3;
+  float distance = 2 [deprecated = true];
+  hipmodel.Tensor output_pattern = 3;
 }
 
 option go_package = "pkg/hipmodel";
