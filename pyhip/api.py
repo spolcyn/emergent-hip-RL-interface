@@ -18,6 +18,7 @@ import hip_util
 import tensor_pb2
 import dataset_update_pb2
 import test_item_pb2
+import name_error_pb2
 
 # basic default parameters for the model server
 SERVER_URL="http://localhost"
@@ -111,9 +112,8 @@ class HipAPI:
             corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.
 
         Returns:
-            (requests.Response, bool): The full response to the HTTP request,
-                and a bool indicating whether an error was returned by the
-                server. The body contains the serialized TestItem protobuf.
+            Success: (ndarray, True) Pattern returned by model and True
+            Failure: (requests.response, False) Full HTTP response and False
         """
 
         api_endpoint = "/model/testpattern"
@@ -125,10 +125,25 @@ class HipAPI:
 
         data = test_item.SerializeToString()
 
-        return self.MakeRequest('POST',
+        response, success = self.MakeRequest('POST',
                                  self.MakeURLString(api_endpoint),
                                  data,
                                  headers={'Content-Type':'application/octet-stream'})
+
+        if not success:
+            logger.warn("Test pattern failed")
+            return response, success
+
+        test_output = name_error_pb2.NameError()
+        test_output.ParseFromString(response.content)
+
+        # process output pattern to numpy array
+        output_pattern = np.asarray(test_output.output_pattern.data)
+        output_pattern = output_pattern.reshape(
+                         tuple(test_output.output_pattern.dimensions))
+
+        return output_pattern, success
+
 
     def StartTraining(self, maxruns = 1, maxepcs = 50):
         """
