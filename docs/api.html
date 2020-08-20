@@ -44,6 +44,7 @@ import hip_util
 import tensor_pb2
 import dataset_update_pb2
 import test_item_pb2
+import name_error_pb2
 
 # basic default parameters for the model server
 SERVER_URL=&#34;http://localhost&#34;
@@ -137,9 +138,8 @@ class HipAPI:
             corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.
 
         Returns:
-            (requests.Response, bool): The full response to the HTTP request,
-                and a bool indicating whether an error was returned by the
-                server. The body contains the serialized TestItem protobuf.
+            Success: (ndarray, True) Pattern returned by model and True
+            Failure: (requests.response, False) Full HTTP response and False
         &#34;&#34;&#34;
 
         api_endpoint = &#34;/model/testpattern&#34;
@@ -151,10 +151,25 @@ class HipAPI:
 
         data = test_item.SerializeToString()
 
-        return self.MakeRequest(&#39;POST&#39;,
+        response, success = self.MakeRequest(&#39;POST&#39;,
                                  self.MakeURLString(api_endpoint),
                                  data,
                                  headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})
+
+        if not success:
+            logger.warn(&#34;Test pattern failed&#34;)
+            return response, success
+
+        test_output = name_error_pb2.NameError()
+        test_output.ParseFromString(response.content)
+
+        # process output pattern to numpy array
+        output_pattern = np.asarray(test_output.output_pattern.data)
+        output_pattern = output_pattern.reshape(
+                         tuple(test_output.output_pattern.dimensions))
+
+        return output_pattern, success
+
 
     def StartTraining(self, maxruns = 1, maxepcs = 50):
         &#34;&#34;&#34;
@@ -362,9 +377,8 @@ if TEST_UTP:
             corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.
 
         Returns:
-            (requests.Response, bool): The full response to the HTTP request,
-                and a bool indicating whether an error was returned by the
-                server. The body contains the serialized TestItem protobuf.
+            Success: (ndarray, True) Pattern returned by model and True
+            Failure: (requests.response, False) Full HTTP response and False
         &#34;&#34;&#34;
 
         api_endpoint = &#34;/model/testpattern&#34;
@@ -376,10 +390,25 @@ if TEST_UTP:
 
         data = test_item.SerializeToString()
 
-        return self.MakeRequest(&#39;POST&#39;,
+        response, success = self.MakeRequest(&#39;POST&#39;,
                                  self.MakeURLString(api_endpoint),
                                  data,
                                  headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})
+
+        if not success:
+            logger.warn(&#34;Test pattern failed&#34;)
+            return response, success
+
+        test_output = name_error_pb2.NameError()
+        test_output.ParseFromString(response.content)
+
+        # process output pattern to numpy array
+        output_pattern = np.asarray(test_output.output_pattern.data)
+        output_pattern = output_pattern.reshape(
+                         tuple(test_output.output_pattern.dimensions))
+
+        return output_pattern, success
+
 
     def StartTraining(self, maxruns = 1, maxepcs = 50):
         &#34;&#34;&#34;
@@ -607,9 +636,12 @@ This method can serve as a useful template for creating such methods.</p>
 <h2 id="args">Args</h2>
 <p>corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.</p>
 <h2 id="returns">Returns</h2>
-<p>(requests.Response, bool): The full response to the HTTP request,
-and a bool indicating whether an error was returned by the
-server. The body contains the serialized TestItem protobuf.</p></div>
+<dl>
+<dt><code>Success</code></dt>
+<dd>(ndarray, True) Pattern returned by model and True</dd>
+<dt><code>Failure</code></dt>
+<dd>(requests.response, False) Full HTTP response and False</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
@@ -622,9 +654,8 @@ server. The body contains the serialized TestItem protobuf.</p></div>
         corrupted_pattern(4-D ndarray): Source pattern corrupted in some way.
 
     Returns:
-        (requests.Response, bool): The full response to the HTTP request,
-            and a bool indicating whether an error was returned by the
-            server. The body contains the serialized TestItem protobuf.
+        Success: (ndarray, True) Pattern returned by model and True
+        Failure: (requests.response, False) Full HTTP response and False
     &#34;&#34;&#34;
 
     api_endpoint = &#34;/model/testpattern&#34;
@@ -636,10 +667,24 @@ server. The body contains the serialized TestItem protobuf.</p></div>
 
     data = test_item.SerializeToString()
 
-    return self.MakeRequest(&#39;POST&#39;,
+    response, success = self.MakeRequest(&#39;POST&#39;,
                              self.MakeURLString(api_endpoint),
                              data,
-                             headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})</code></pre>
+                             headers={&#39;Content-Type&#39;:&#39;application/octet-stream&#39;})
+
+    if not success:
+        logger.warn(&#34;Test pattern failed&#34;)
+        return response, success
+
+    test_output = name_error_pb2.NameError()
+    test_output.ParseFromString(response.content)
+
+    # process output pattern to numpy array
+    output_pattern = np.asarray(test_output.output_pattern.data)
+    output_pattern = output_pattern.reshape(
+                     tuple(test_output.output_pattern.dimensions))
+
+    return output_pattern, success</code></pre>
 </details>
 </dd>
 <dt id="pyhip.api.HipAPI.UpdateTrainingDataFile"><code class="name flex">
