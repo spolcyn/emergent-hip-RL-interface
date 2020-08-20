@@ -15,8 +15,6 @@ from tqdm import tqdm
 import api as hipapi
 import hip_util
 
-import NameError_pb2
-
 # create module logger
 logger = logging.getLogger(__name__)
 
@@ -163,15 +161,8 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
                         return closest_pattern
 
                     corrupted = CorruptPattern(p, r)
-                    response, success = ha.TestPattern(corrupted)
-
-                    test_output = NameError_pb2.NameError()
-                    test_output.ParseFromString(response.content)
-
-                    # process output pattern to numpy array
-                    output_pattern = np.asarray(test_output.output_pattern.data)
-                    output_pattern = output_pattern.reshape(
-                                     tuple(test_output.output_pattern.dimensions))
+                    output_pattern, success = ha.TestPattern(corrupted)
+                    assert success, "Test pattern failed"
                     np.rint(output_pattern)
 
                     # test if the closest pattern is the same as the target
