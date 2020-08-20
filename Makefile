@@ -4,6 +4,7 @@
 
 BINARY_NAME=model.exe
 
+DOCS_DIR=docs
 PROTO_SRC_DIR=proto
 GO_MODEL_DIR=pkg/hipmodel
 PYTHON_DIR=pyhip
@@ -35,7 +36,11 @@ run: $(BINARY_NAME)
 
 .PHONY: docs
 docs:
-	cd $(PYTHON_DIR) && pdoc3 --html ./ --output-dir ../docs --force
+	pushd $(PYTHON_DIR) && \
+		pdoc3 --html ./ --output-dir ../$(DOCS_DIR) --force && \
+		popd && \
+		mv $(DOCS_DIR)/$(PYTHON_DIR)/*.html $(DOCS_DIR)/ && \
+		rm -r $(DOCS_DIR)/$(PYTHON_DIR)
 
 clean: 
 	rm -f $(BINARY_NAME) $(ALL_GO_PROTO) $(ALL_PY_PROTO)

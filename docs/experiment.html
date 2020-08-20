@@ -207,7 +207,7 @@ def MemoryVsPatternCount(minPatterns = 10, maxPatterns = 20, step = 1, trials = 
                         successfulRecalls += 1
 
                     logger.debug(&#34;Closest pattern: %s&#34;, closest_pattern)
-                    logger.debug(&#34;Input pattern: %s&#34;, p)
+                    logger.debug(&#34;Target pattern: %s&#34;, p)
                     logger.debug(&#34;Corrupted pattern: %s&#34;, corrupted)
 
                 results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
@@ -464,7 +464,7 @@ if __name__ == &#34;__main__&#34;:
                         successfulRecalls += 1
 
                     logger.debug(&#34;Closest pattern: %s&#34;, closest_pattern)
-                    logger.debug(&#34;Input pattern: %s&#34;, p)
+                    logger.debug(&#34;Target pattern: %s&#34;, p)
                     logger.debug(&#34;Corrupted pattern: %s&#34;, corrupted)
 
                 results[c][r_idx] += (successfulRecalls / len(currentData)) # normalize accross patterns
